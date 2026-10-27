@@ -1,0 +1,773 @@
+// EnrichMINT schema (see PLAN.md section F).
+// Conventions: cuid string ids, camelCase fields mapped to snake_case columns,
+// PascalCase models mapped to snake_case plural tables via @@map.
+// Money is integer cents with an explicit currency. Ledger rows are append-only.
+
+generator client {
+  provider               = "prisma-client"
+  output                 = "../generated/prisma"
+  moduleFormat           = "cjs"
+  generatedFileExtension = "ts"
+  importFileExtension    = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Accounts ────────────────────────────────────────────────────────────
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique @db.VarChar(255)
+  passwordHash      String    @map("password_hash")
+  displayName       String    @map("display_name") @db.VarChar(120)
+  role              UserRole  @default(USER)
+  isActive          Boolean   @default(true) @map("is_active")
+  isDemo            Boolean   @default(false) @map("is_demo")
+  sessionsRevokedAt DateTime? @map("sessions_revoked_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  contributorProfile ContributorProfile?
+  goals              LearnerGoal[]
+  orders             Order[]
+  entitlements       Entitlement[]
+  learnerRequests    PersonalRequest[]   @relation("RequestLearner")
+  assistantMessages  AssistantMessage[]
+  feedback           Feedback[]
+  reports            Report[]
+  auditEvents        AuditEvent[]
+  modelCalls         ModelCall[]
+  policyDecisions    PolicyDecision[]
+  stewardSessions    StewardSession[]
+
+  @@map("users")
+}
+
+enum ContributorStatus {
+  PENDING
+  APPROVED
+  SUSPENDED
+}
+
+model ContributorProfile {
+  id                 String            @id @default(cuid())
+  userId             String            @unique @map("user_id")
+  headline           String            @db.VarChar(160)
+  background         String            @db.Text
+  status             ContributorStatus @default(PENDING)
+  payoutEmail        String?           @map("payout_email") @db.VarChar(255)
+  responsePriceCents Int?              @map("response_price_cents")
+  acceptingRequests  Boolean           @default(false) @map("accepting_requests")
+  acceptanceWindowH  Int               @default(48) @map("acceptance_window_h")
+  deliveryH          Int               @default(72) @map("delivery_h")
+  boundaries         String?           @db.Text
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  interviews    Interview[]
+  guides        Guide[]
+  requests      PersonalRequest[] @relation("RequestContributor")
+  ledgerEntries LedgerEntry[]
+  payouts       Payout[]
+
+  @@map("contributor_profiles")
+}
+
+// ─── Content ─────────────────────────────────────────────────────────────
+
+model Category {
+  id          String   @id @default(cuid())
+  slug        String   @unique @db.VarChar(80)
+  name        String   @db.VarChar(120)
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  guides Guide[]
+
+  @@map("categories")
+}
+
+enum InterviewStatus {
+  IN_PROGRESS
+  COMPLETED
+  DRAFTED
+}
+
+model Interview {
+  id            String          @id @default(cuid())
+  contributorId String          @map("contributor_id")
+  status        InterviewStatus @default(IN_PROGRESS)
+  // [{ key, question, answer, followUp?: { question, answer } }], answers verbatim.
+  answers       Json            @default("[]")
+  guideId       String?         @unique @map("guide_id")
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  contributor ContributorProfile @relation(fields: [contributorId], references: [id], onDelete: Cascade)
+  guide       Guide?             @relation(fields: [guideId], references: [id])
+
+  @@index([contributorId])
+  @@map("interviews")
+}
+
+enum GuideStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+  UNPUBLISHED
+  REMOVED
+}
+
+model Guide {
+  id                 String      @id @default(cuid())
+  contributorId      String      @map("contributor_id")
+  categoryId         String      @map("category_id")
+  slug               String      @unique @db.VarChar(160)
+  title              String      @db.VarChar(200)
+  status             GuideStatus @default(DRAFT)
+  priceCents         Int         @map("price_cents")
+  currency           String      @default("USD") @db.VarChar(3)
+  topics             String[]    @default([])
+  agentAssistAllowed Boolean     @default(true) @map("agent_assist_allowed")
+  currentVersionId   String?     @unique @map("current_version_id")
+  isDemo             Boolean     @default(false) @map("is_demo")
+  createdAt          DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  contributor       ContributorProfile      @relation(fields: [contributorId], references: [id], onDelete: Cascade)
+  category          Category                @relation(fields: [categoryId], references: [id])
+  currentVersion    GuideVersion?           @relation("CurrentVersion", fields: [currentVersionId], references: [id])
+  versions          GuideVersion[]          @relation("GuideVersions")
+  permissionChanges GuidePermissionChange[]
+  interview         Interview?
+  entitlements      Entitlement[]
+  orders            Order[]
+  recommendations   Recommendation[]
+  requests          PersonalRequest[]
+  assistantMessages AssistantMessage[]
+  gaps              GuideGap[]
+
+  @@index([contributorId])
+  @@index([categoryId])
+  @@index([status])
+  @@map("guides")
+}
+
+enum ReviewStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model GuideVersion {
+  id           String       @id @default(cuid())
+  guideId      String       @map("guide_id")
+  number       Int
+  summary      String       @db.Text
+  // [{ id, key, title, body }]. Frozen once submitted; edits create a new version.
+  sections     Json
+  // [{ key, question }]: things the contributor has not said yet. Never filled by AI.
+  gaps         Json         @default("[]")
+  preview      String       @db.Text
+  audience     String       @db.Text
+  limitations  String       @db.Text
+  claimLabel   String       @default("SELF_REPORTED") @map("claim_label") @db.VarChar(40)
+  reviewStatus ReviewStatus @default(DRAFT) @map("review_status")
+  reviewerId   String?      @map("reviewer_id")
+  reviewNote   String?      @map("review_note") @db.Text
+  submittedAt  DateTime?    @map("submitted_at") @db.Timestamptz(6)
+  reviewedAt   DateTime?    @map("reviewed_at") @db.Timestamptz(6)
+  publishedAt  DateTime?    @map("published_at") @db.Timestamptz(6)
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  guide        Guide         @relation("GuideVersions", fields: [guideId], references: [id], onDelete: Cascade)
+  currentOf    Guide?        @relation("CurrentVersion")
+  entitlements Entitlement[]
+
+  @@unique([guideId, number])
+  @@index([guideId])
+  @@index([reviewStatus])
+  @@map("guide_versions")
+}
+
+model GuidePermissionChange {
+  id        String   @id @default(cuid())
+  guideId   String   @map("guide_id")
+  field     String   @db.VarChar(60)
+  oldValue  String   @map("old_value") @db.VarChar(200)
+  newValue  String   @map("new_value") @db.VarChar(200)
+  changedBy String   @map("changed_by")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  guide Guide @relation(fields: [guideId], references: [id], onDelete: Cascade)
+
+  @@index([guideId])
+  @@map("guide_permission_changes")
+}
+
+model GuideGap {
+  id        String   @id @default(cuid())
+  guideId   String   @map("guide_id")
+  userId    String   @map("user_id")
+  question  String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  guide Guide @relation(fields: [guideId], references: [id], onDelete: Cascade)
+
+  @@index([guideId])
+  @@index([userId])
+  @@map("guide_gaps")
+}
+
+// ─── Learners ────────────────────────────────────────────────────────────
+
+enum GoalStatus {
+  ACTIVE
+  CLOSED
+}
+
+model LearnerGoal {
+  id          String     @id @default(cuid())
+  userId      String     @map("user_id")
+  text        String     @db.Text
+  // [{ role: 'user' | 'assistant', text }] clarifying exchange.
+  messages    Json       @default("[]")
+  constraints Json       @default("{}")
+  budgetCents Int        @map("budget_cents")
+  currency    String     @default("USD") @db.VarChar(3)
+  status      GoalStatus @default(ACTIVE)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recommendations Recommendation[]
+  orders          Order[]
+  requests        PersonalRequest[]
+  stewardSessions StewardSession[]
+
+  @@index([userId])
+  @@map("learner_goals")
+}
+
+enum RecommendationSlot {
+  STANDARD
+  NEW_CONTRIBUTOR
+}
+
+model Recommendation {
+  id        String             @id @default(cuid())
+  goalId    String             @map("goal_id")
+  guideId   String             @map("guide_id")
+  rank      Int
+  reason    String             @db.Text
+  fitNotes  String?            @map("fit_notes") @db.Text
+  slot      RecommendationSlot @default(STANDARD)
+  createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  goal  LearnerGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  guide Guide       @relation(fields: [guideId], references: [id], onDelete: Cascade)
+
+  @@index([goalId])
+  @@index([guideId])
+  @@map("recommendations")
+}
+
+// ─── Payments ────────────────────────────────────────────────────────────
+
+enum OrderKind {
+  GUIDE
+  REQUEST
+}
+
+enum OrderStatus {
+  CREATED
+  APPROVED
+  CAPTURE_PENDING
+  COMPLETED
+  DENIED
+  FAILED
+  REFUNDED
+  REVERSED
+  VOIDED
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  buyerId         String      @map("buyer_id")
+  goalId          String?     @map("goal_id")
+  kind            OrderKind
+  guideId         String?     @map("guide_id")
+  requestId       String?     @map("request_id")
+  amountCents     Int         @map("amount_cents")
+  currency        String      @default("USD") @db.VarChar(3)
+  commissionBps   Int         @map("commission_bps")
+  status          OrderStatus @default(CREATED)
+  idempotencyKey  String      @unique @map("idempotency_key")
+  paypalOrderId   String?     @unique @map("paypal_order_id")
+  paypalCaptureId String?     @unique @map("paypal_capture_id")
+  paypalFeeCents  Int?        @map("paypal_fee_cents")
+  failureReason   String?     @map("failure_reason") @db.VarChar(200)
+  completedAt     DateTime?   @map("completed_at") @db.Timestamptz(6)
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  buyer         User             @relation(fields: [buyerId], references: [id])
+  goal          LearnerGoal?     @relation(fields: [goalId], references: [id])
+  guide         Guide?           @relation(fields: [guideId], references: [id])
+  request       PersonalRequest? @relation("RequestOrders", fields: [requestId], references: [id])
+  entitlement   Entitlement?
+  ledgerEntries LedgerEntry[]
+  refunds       Refund[]
+
+  @@index([buyerId])
+  @@index([goalId])
+  @@index([guideId])
+  @@index([requestId])
+  @@index([status])
+  @@map("orders")
+}
+
+model WebhookEvent {
+  id            String    @id @default(cuid())
+  paypalEventId String    @unique @map("paypal_event_id")
+  type          String    @db.VarChar(120)
+  resourceId    String?   @map("resource_id") @db.VarChar(120)
+  verified      Boolean
+  payload       Json
+  outcome       String?   @db.VarChar(200)
+  processedAt   DateTime? @map("processed_at") @db.Timestamptz(6)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([resourceId])
+  @@map("webhook_events")
+}
+
+enum EntitlementStatus {
+  ACTIVE
+  REVOKED_REFUND
+  REVOKED_ADMIN
+}
+
+model Entitlement {
+  id                 String            @id @default(cuid())
+  userId             String            @map("user_id")
+  guideId            String            @map("guide_id")
+  orderId            String            @unique @map("order_id")
+  purchasedVersionId String            @map("purchased_version_id")
+  aiQuestionsLimit   Int               @map("ai_questions_limit")
+  aiQuestionsUsed    Int               @default(0) @map("ai_questions_used")
+  aiExpiresAt        DateTime          @map("ai_expires_at") @db.Timestamptz(6)
+  status             EntitlementStatus @default(ACTIVE)
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guide            Guide        @relation(fields: [guideId], references: [id])
+  order            Order        @relation(fields: [orderId], references: [id])
+  purchasedVersion GuideVersion @relation(fields: [purchasedVersionId], references: [id])
+
+  @@unique([userId, guideId])
+  @@index([guideId])
+  @@index([purchasedVersionId])
+  @@map("entitlements")
+}
+
+enum LedgerAccount {
+  GROSS_SALES
+  PLATFORM_COMMISSION
+  PROCESSING_FEE
+  CONTRIBUTOR_PAYABLE
+  REFUNDS
+  PAYOUTS
+}
+
+model LedgerEntry {
+  id            String        @id @default(cuid())
+  contributorId String?       @map("contributor_id")
+  orderId       String?       @map("order_id")
+  refundId      String?       @map("refund_id")
+  payoutId      String?       @map("payout_id")
+  account       LedgerAccount
+  // Signed cents. Balances are derived by summing, never stored.
+  amountCents   Int           @map("amount_cents")
+  currency      String        @default("USD") @db.VarChar(3)
+  memo          String        @db.VarChar(200)
+  availableAt   DateTime      @default(now()) @map("available_at") @db.Timestamptz(6)
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  contributor ContributorProfile? @relation(fields: [contributorId], references: [id])
+  order       Order?              @relation(fields: [orderId], references: [id])
+  refund      Refund?             @relation(fields: [refundId], references: [id])
+  payout      Payout?             @relation(fields: [payoutId], references: [id])
+
+  @@index([contributorId])
+  @@index([orderId])
+  @@index([refundId])
+  @@index([payoutId])
+  @@map("ledger_entries")
+}
+
+enum PayoutStatus {
+  REQUESTED
+  PENDING
+  SUCCESS
+  FAILED
+  UNCLAIMED
+  RETURNED
+  BLOCKED
+}
+
+model Payout {
+  id            String       @id @default(cuid())
+  contributorId String       @map("contributor_id")
+  amountCents   Int          @map("amount_cents")
+  currency      String       @default("USD") @db.VarChar(3)
+  receiverEmail String       @map("receiver_email") @db.VarChar(255)
+  status        PayoutStatus @default(REQUESTED)
+  paypalBatchId String?      @unique @map("paypal_batch_id")
+  paypalItemId  String?      @unique @map("paypal_item_id")
+  failureReason String?      @map("failure_reason") @db.VarChar(200)
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  contributor   ContributorProfile @relation(fields: [contributorId], references: [id])
+  ledgerEntries LedgerEntry[]
+
+  @@index([contributorId])
+  @@map("payouts")
+}
+
+enum RefundStatus {
+  REQUESTED
+  APPROVED
+  SUBMITTED
+  COMPLETED
+  REJECTED
+  FAILED
+}
+
+model Refund {
+  id             String       @id @default(cuid())
+  orderId        String       @map("order_id")
+  amountCents    Int          @map("amount_cents")
+  reason         String       @db.Text
+  status         RefundStatus @default(REQUESTED)
+  paypalRefundId String?      @unique @map("paypal_refund_id")
+  requestedBy    String       @map("requested_by")
+  decidedBy      String?      @map("decided_by")
+  decisionNote   String?      @map("decision_note") @db.Text
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  order         Order         @relation(fields: [orderId], references: [id])
+  ledgerEntries LedgerEntry[]
+
+  @@index([orderId])
+  @@map("refunds")
+}
+
+// ─── Personalized requests ───────────────────────────────────────────────
+
+enum RequestState {
+  DRAFT
+  SENT
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  CANCELLED
+  PAYMENT_EXPIRED
+  PAID
+  OVERDUE
+  DELIVERED
+  CLOSED
+  DISPUTED
+  REFUNDED
+  RESOLVED_REFUNDED
+  RESOLVED_UPHELD
+}
+
+enum TransitionActor {
+  LEARNER
+  CONTRIBUTOR
+  SYSTEM
+  ADMIN
+}
+
+model PersonalRequest {
+  id              String       @id @default(cuid())
+  learnerId       String       @map("learner_id")
+  contributorId   String       @map("contributor_id")
+  guideId         String?      @map("guide_id")
+  goalId          String?      @map("goal_id")
+  question        String       @db.Text
+  desiredResponse String       @map("desired_response") @db.Text
+  // [{ key, label, value, share }]. Only share=true items are ever shown to the contributor.
+  contextItems    Json         @default("[]") @map("context_items")
+  priceCents      Int          @map("price_cents")
+  currency        String       @default("USD") @db.VarChar(3)
+  deliveryH       Int          @map("delivery_h")
+  acceptanceH     Int          @map("acceptance_h")
+  state           RequestState @default(DRAFT)
+  declineReason   String?      @map("decline_reason") @db.Text
+  sentAt          DateTime?    @map("sent_at") @db.Timestamptz(6)
+  acceptBy        DateTime?    @map("accept_by") @db.Timestamptz(6)
+  acceptedAt      DateTime?    @map("accepted_at") @db.Timestamptz(6)
+  payBy           DateTime?    @map("pay_by") @db.Timestamptz(6)
+  paidAt          DateTime?    @map("paid_at") @db.Timestamptz(6)
+  deliverBy       DateTime?    @map("deliver_by") @db.Timestamptz(6)
+  deliveredAt     DateTime?    @map("delivered_at") @db.Timestamptz(6)
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  learner     User                @relation("RequestLearner", fields: [learnerId], references: [id])
+  contributor ContributorProfile  @relation("RequestContributor", fields: [contributorId], references: [id])
+  guide       Guide?              @relation(fields: [guideId], references: [id])
+  goal        LearnerGoal?        @relation(fields: [goalId], references: [id])
+  orders      Order[]             @relation("RequestOrders")
+  transitions RequestTransition[]
+  response    RequestResponse?
+
+  @@index([learnerId])
+  @@index([contributorId])
+  @@index([guideId])
+  @@index([goalId])
+  @@index([state])
+  @@map("personal_requests")
+}
+
+model RequestTransition {
+  id        String          @id @default(cuid())
+  requestId String          @map("request_id")
+  fromState RequestState    @map("from_state")
+  toState   RequestState    @map("to_state")
+  actor     TransitionActor
+  actorId   String?         @map("actor_id")
+  reason    String?         @db.VarChar(300)
+  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  request PersonalRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@map("request_transitions")
+}
+
+model RequestResponse {
+  id           String   @id @default(cuid())
+  requestId    String   @unique @map("request_id")
+  body         String   @db.Text
+  aiUseAllowed Boolean  @map("ai_use_allowed")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  request PersonalRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@map("request_responses")
+}
+
+// ─── Assistant, feedback, oversight ──────────────────────────────────────
+
+model AssistantMessage {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  guideId   String?  @map("guide_id")
+  requestId String?  @map("request_id")
+  role      String   @db.VarChar(16)
+  // user: { text }. assistant: { blocks: [{ type, text, citations }], gap?, proposal? }
+  content   Json
+  flags     String[] @default([])
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guide Guide? @relation(fields: [guideId], references: [id])
+
+  @@index([userId])
+  @@index([guideId])
+  @@map("assistant_messages")
+}
+
+enum FeedbackTarget {
+  GUIDE
+  RESPONSE
+}
+
+enum FeedbackPhase {
+  IMMEDIATE
+  FOLLOW_UP
+}
+
+model Feedback {
+  id                  String         @id @default(cuid())
+  userId              String         @map("user_id")
+  targetType          FeedbackTarget @map("target_type")
+  targetId            String         @map("target_id")
+  phase               FeedbackPhase
+  relevant            Boolean?
+  nextStep            Boolean?       @map("next_step")
+  missingOrMisleading String?        @map("missing_or_misleading") @db.Text
+  tried               Boolean?
+  outcome             String?        @db.Text
+  usefulAfter         Boolean?       @map("useful_after")
+  createdAt           DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetType, targetId, phase])
+  @@index([targetType, targetId])
+  @@map("feedback")
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+}
+
+model Report {
+  id         String       @id @default(cuid())
+  reporterId String       @map("reporter_id")
+  targetType String       @map("target_type") @db.VarChar(40)
+  targetId   String       @map("target_id")
+  reason     String       @db.Text
+  status     ReportStatus @default(OPEN)
+  resolution String?      @db.Text
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  reporter User @relation(fields: [reporterId], references: [id])
+
+  @@index([reporterId])
+  @@index([status])
+  @@map("reports")
+}
+
+enum PolicyOutcome {
+  ALLOW
+  WARN
+  DENY
+}
+
+enum PolicySource {
+  LOCAL
+  HCAI
+  HCAI_UNAVAILABLE
+}
+
+model PolicyDecision {
+  id          String        @id @default(cuid())
+  userId      String?       @map("user_id")
+  check       String        @db.VarChar(80)
+  subjectType String        @map("subject_type") @db.VarChar(40)
+  subjectId   String?       @map("subject_id")
+  outcome     PolicyOutcome
+  source      PolicySource
+  plainReason String        @map("plain_reason") @db.Text
+  userVisible Boolean       @default(true) @map("user_visible")
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@map("policy_decisions")
+}
+
+enum ActorType {
+  USER
+  AGENT
+  SYSTEM
+  ADMIN
+}
+
+model AuditEvent {
+  id          String    @id @default(cuid())
+  actorId     String?   @map("actor_id")
+  actorType   ActorType @map("actor_type")
+  action      String    @db.VarChar(80)
+  subjectType String    @map("subject_type") @db.VarChar(40)
+  subjectId   String?   @map("subject_id")
+  details     Json      @default("{}")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([subjectType, subjectId])
+  @@map("audit_events")
+}
+
+model ModelCall {
+  id            String   @id @default(cuid())
+  userId        String?  @map("user_id")
+  purpose       String   @db.VarChar(40)
+  model         String   @db.VarChar(80)
+  promptVersion String   @map("prompt_version") @db.VarChar(40)
+  inputTokens   Int      @map("input_tokens")
+  outputTokens  Int      @map("output_tokens")
+  costUsd       Decimal  @map("cost_usd") @db.Decimal(10, 6)
+  latencyMs     Int      @map("latency_ms")
+  ok            Boolean
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("model_calls")
+}
+
+// ─── Steward agent ───────────────────────────────────────────────────────
+
+enum StewardEventKind {
+  USER_MESSAGE
+  AGENT_MESSAGE
+  TOOL_STEP
+  PROPOSAL
+  SYSTEM_UPDATE
+}
+
+model StewardSession {
+  id              String    @id @default(cuid())
+  userId          String    @map("user_id")
+  goalId          String    @map("goal_id")
+  activeGuideId   String?   @map("active_guide_id")
+  activeRequestId String?   @map("active_request_id")
+  // Derived from database facts after every sync; never set by the model.
+  stage           String    @default("GOAL") @db.VarChar(40)
+  // Last facts the sync saw, so backend changes become exactly one update event.
+  lastSeen        Json      @default("{}") @map("last_seen")
+  turnStartedAt   DateTime? @map("turn_started_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal   LearnerGoal    @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  events StewardEvent[]
+
+  @@index([userId])
+  @@index([goalId])
+  @@map("steward_sessions")
+}
+
+model StewardEvent {
+  id        String           @id @default(cuid())
+  sessionId String           @map("session_id")
+  kind      StewardEventKind
+  tool      String?          @db.VarChar(60)
+  // Plain text shown to the learner.
+  summary   String           @db.Text
+  // Card data for proposals and updates.
+  payload   Json             @default("{}")
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  session StewardSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@map("steward_events")
+}

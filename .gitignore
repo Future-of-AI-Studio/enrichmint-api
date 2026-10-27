@@ -1,0 +1,19 @@
+/dist
+/node_modules
+/generated/prisma
+*.tsbuildinfo
+*.log
+/coverage
+.DS_Store
+Thumbs.db
+/.idea
+.vscode/*
+
+# dotenv files (never commit real values)
+.env
+.env.*
+!.env.example
+
+.claude/settings.local.json
+
+/docs
