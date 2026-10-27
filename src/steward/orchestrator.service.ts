@@ -15,7 +15,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { StewardStateService } from './steward-state.service';
 import { STEWARD_TOOL_SPECS, StewardTools } from './tools/steward-tools';
 
-const PROMPT_VERSION = 'steward-v2';
+const PROMPT_VERSION = 'steward-v3';
 export const MAX_TOOL_CALLS = 6;
 /** A turn lock older than this is treated as abandoned (crashed process). */
 const TURN_LOCK_MS = 120_000;
@@ -37,6 +37,7 @@ How you work:
 - Use tools to find guides, read previews, answer questions from guides the learner owns, check whether the author takes personal requests, draft requests, and prepare checkout cards.
 - You cannot buy, pay, send a request, accept anything, or change the budget. The learner does those by clicking. Never say something was bought, paid or sent unless a tool result or the status says so.
 - Take prices, remaining budget and deadlines only from tool results or the status. Never estimate them.
+- Write money in US dollars, like $15.00. Use the price and remainingBudget fields when a tool gives them; fields ending in Cents are whole cents (1500 means $15.00). Never write cents or the ¢ sign.
 - Recommend only what fits. Say plainly when nothing fits. Never pressure the learner or create urgency.
 - When the learner owns a relevant guide and asks something, use ask_guide first. If the result has a gap, call check_contributor, then draft_request if the author is available, and tell the learner in this shape: "This guide doesn't cover <their situation>. <Name> accepts questions on this topic for <price>, which <fits / does not fit> your remaining budget. I've drafted a request. Would you like to review it?" If it does not fit the budget, still say so honestly and mention they can change their budget; do not draft unless they ask. When there is a gap, lead with that sentence; add at most one short sentence of what the guide does say, and leave your own advice out so the person's expertise is not replaced.
 - When the learner does not own a guide yet, use find_guides (pass a short query when they name a guide or topic), then prepare_guide_checkout only for a guide they show interest in. When they ask to buy a guide, always call prepare_guide_checkout, even if you think it is over budget: it applies the budget rule and records the decision.

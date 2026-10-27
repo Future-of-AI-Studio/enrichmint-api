@@ -216,6 +216,7 @@ export class StewardTools {
           slug: rec.guide.slug,
           title: rec.guide.title,
           priceCents: rec.guide.priceCents,
+          price: formatUsd(rec.guide.priceCents),
           contributorName: rec.guide.contributor.user.displayName,
           reason: rec.reason,
           caution: rec.caution,
@@ -228,7 +229,7 @@ export class StewardTools {
           output: {
             ok: true,
             noneSuitable: result.noneSuitable,
-            remainingBudgetCents: result.remainingBudgetCents,
+            remainingBudget: formatUsd(result.remainingBudgetCents),
             picks,
           },
           summary: result.noneSuitable
@@ -254,7 +255,7 @@ export class StewardTools {
             ok: true,
             guideId: guide.id,
             title: guide.title,
-            priceCents: guide.priceCents,
+            price: formatUsd(guide.priceCents),
             contributor: guide.contributor.user.displayName,
             agentAssistAllowed: guide.agentAssistAllowed,
             untrusted_content: wrapUntrusted(
@@ -336,7 +337,16 @@ export class StewardTools {
           };
         }
         return {
-          output: { ok: true, ...offer, question: args.question },
+          output: {
+            ok: true,
+            ...offer,
+            price: formatUsd(offer.priceCents),
+            remainingBudget:
+              offer.remainingBudgetCents === null
+                ? null
+                : formatUsd(offer.remainingBudgetCents),
+            question: args.question,
+          },
           summary: `${offer.contributorName} takes personal requests for ${formatUsd(offer.priceCents)}; ${offer.withinBudget ? 'that fits your remaining budget' : 'that is over your remaining budget'}.`,
           card: {
             type: 'human_help_offer',
@@ -382,7 +392,7 @@ export class StewardTools {
             ok: true,
             requestId: draft.id,
             state: draft.state,
-            priceCents: draft.priceCents,
+            price: formatUsd(draft.priceCents),
             contributor: name,
             sent: false,
           },
@@ -432,8 +442,8 @@ export class StewardTools {
             ok: true,
             prepared: !overBudget,
             charged: false,
-            priceCents: guide.priceCents,
-            remainingBudgetCents: snapshot.goal.remainingCents,
+            price: formatUsd(guide.priceCents),
+            remainingBudget: formatUsd(snapshot.goal.remainingCents),
             overBudget,
           },
           summary: overBudget
@@ -477,7 +487,7 @@ export class StewardTools {
             ok: true,
             prepared: true,
             charged: false,
-            priceCents: request.priceCents,
+            price: formatUsd(request.priceCents),
             payBy: request.payBy,
           },
           summary: `Prepared the ${formatUsd(request.priceCents)} payment card. Nothing is charged until you approve.`,
