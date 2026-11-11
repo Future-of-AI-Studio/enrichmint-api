@@ -299,11 +299,14 @@ export class OrdersService {
     }
   }
 
-  async markApproved(paypalOrderId: string): Promise<void> {
+  /** Returns false when no order of ours carries this PayPal id. */
+  async markApproved(paypalOrderId: string): Promise<boolean> {
     await this.prisma.order.updateMany({
       where: { paypalOrderId, status: 'CREATED' },
       data: { status: 'APPROVED' },
     });
+    const known = await this.prisma.order.count({ where: { paypalOrderId } });
+    return known > 0;
   }
 
   findMine(userId: string) {

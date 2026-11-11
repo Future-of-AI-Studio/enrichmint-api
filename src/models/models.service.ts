@@ -94,6 +94,13 @@ export class ModelsService {
     }
   }
 
+  /** The wording for a failed AI call: paused at the daily cap, or a passing fault. */
+  async unavailableMessage(fallback: string): Promise<string> {
+    return (await this.isOverDailyBudget())
+      ? 'AI help is paused until tomorrow (UTC) because the daily AI budget is used up. Guides, requests and payments still work.'
+      : fallback;
+  }
+
   private async isOverDailyBudget(): Promise<boolean> {
     const startOfDay = new Date();
     startOfDay.setUTCHours(0, 0, 0, 0);

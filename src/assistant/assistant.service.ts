@@ -104,8 +104,9 @@ export class AssistantService {
       });
       throw new ServiceUnavailableException({
         error: 'ai_unavailable',
-        message:
+        message: await this.models.unavailableMessage(
           'The assistant could not answer just now. This question was not counted. Try again shortly.',
+        ),
       });
     }
 
@@ -333,7 +334,9 @@ export class AssistantService {
     if (!output) {
       throw new ServiceUnavailableException({
         error: 'ai_unavailable',
-        message: 'The assistant could not help just now. Try again shortly.',
+        message: await this.models.unavailableMessage(
+          'The assistant could not help just now. Try again shortly.',
+        ),
       });
     }
     const blocks = verifyAttribution(output.blocks, sources);

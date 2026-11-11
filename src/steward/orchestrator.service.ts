@@ -159,7 +159,9 @@ export class StewardOrchestrator {
         if (step === 0) {
           throw new ServiceUnavailableException({
             error: 'ai_unavailable',
-            message: 'The steward is unavailable right now. Try again shortly.',
+            message: await this.models.unavailableMessage(
+              'The steward is unavailable right now. Try again shortly.',
+            ),
           });
         }
         return;

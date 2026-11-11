@@ -111,9 +111,9 @@ export class WebhooksService {
   ): Promise<string> {
     switch (type) {
       case 'CHECKOUT.ORDER.APPROVED': {
-        if (typeof resource.id === 'string')
-          await this.orders.markApproved(resource.id);
-        return 'order approved';
+        if (typeof resource.id !== 'string') return 'order approved';
+        const known = await this.orders.markApproved(resource.id);
+        return known ? 'order approved' : 'approval for unknown order';
       }
       case 'PAYMENT.CAPTURE.COMPLETED':
       case 'PAYMENT.CAPTURE.PENDING':
