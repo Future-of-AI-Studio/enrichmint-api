@@ -3,6 +3,7 @@ import { AssistantModule } from 'src/assistant/assistant.module';
 import { GoalsModule } from 'src/goals/goals.module';
 import { GuidesModule } from 'src/guides/guides.module';
 import { RequestsModule } from 'src/requests/requests.module';
+import { ContributorAgentService } from './contributor-agent.service';
 import { StewardOrchestrator } from './orchestrator.service';
 import { StewardStateService } from './steward-state.service';
 import { StewardController } from './steward.controller';
@@ -16,6 +17,7 @@ import { StewardTools } from './tools/steward-tools';
     StewardService,
     StewardStateService,
     StewardTools,
+    ContributorAgentService,
     StewardOrchestrator,
   ],
 })

@@ -13,6 +13,7 @@ import { PolicyService } from 'src/policy/policy.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { RequestsService } from 'src/requests/requests.service';
 import type { CardType } from '../utils/stage.util';
+import { ContributorAgentService } from '../contributor-agent.service';
 import { StewardStateService } from '../steward-state.service';
 
 export interface ToolContext {
@@ -51,6 +52,10 @@ const ARGS = {
       .max(300)
       .nullish()
       .transform((value) => value ?? ''),
+  }),
+  consult_contributor_agent: z.object({
+    contributorId: idArg,
+    question: questionArg,
   }),
   // Exactly one target; a missing one becomes '' so every tool's args stay plain strings.
   draft_request: z
@@ -145,6 +150,18 @@ export const STEWARD_TOOL_SPECS: ToolSpec[] = [
     }),
   },
   {
+    name: 'consult_contributor_agent',
+    description:
+      'Agent to agent: ask a person’s own agent whether a question fits what they take on, judged from their published boundaries and experience. Returns fit (FITS, UNSURE or OUTSIDE), their agent’s reply, and their price, deadlines and budget fit. Read-only: it accepts nothing and commits no one.',
+    parameters: strictObject({
+      contributorId: {
+        type: 'string',
+        description: 'A contributorId from find_people or check_contributor.',
+      },
+      question: questionProp,
+    }),
+  },
+  {
     name: 'draft_request',
     description:
       'Draft a personal request to a guide author (pass guideId) or to a person from find_people (pass contributorId). Exactly one of the two. Creates a DRAFT only; the learner reviews, chooses what to share and sends it themselves.',
@@ -196,6 +213,7 @@ export class StewardTools {
     private readonly state: StewardStateService,
     private readonly discovery: DiscoveryService,
     private readonly people: PeopleService,
+    private readonly contributorAgent: ContributorAgentService,
     private readonly guides: GuidesService,
     private readonly assistant: AssistantService,
     private readonly requests: RequestsService,
@@ -438,6 +456,46 @@ export class StewardTools {
               remainingBudgetCents: result.remainingBudgetCents,
               people,
             },
+          },
+        };
+      }
+
+      case 'consult_contributor_agent': {
+        const result = await this.contributorAgent.consult(
+          user.id,
+          args.contributorId,
+          args.question,
+          session.goalId,
+        );
+        if (!result) return fail('not_found', 'That person is not available.');
+        const name = result.contributorName;
+        const verdict = {
+          FITS: 'it fits what they take on',
+          UNSURE: 'their agent is not sure it fits',
+          OUTSIDE: 'it is outside what they take on',
+        }[result.fit];
+        return {
+          output: {
+            ok: true,
+            contributorId: result.contributorId,
+            contributor: name,
+            available: result.available,
+            fit: result.fit,
+            price:
+              result.priceCents === null ? null : formatUsd(result.priceCents),
+            withinBudget: result.withinBudget,
+            deliveryHours: result.deliveryH,
+            acceptanceHours: result.acceptanceH,
+            accepted: false,
+            untrusted_content: wrapUntrusted(
+              'contributor_agent_reply',
+              [result.reply, result.suggestedFocus].filter(Boolean).join(' '),
+            ),
+          },
+          summary: `Asked ${name}’s agent about your question: ${verdict}.`,
+          card: {
+            type: 'agent_exchange',
+            data: { ...result },
           },
         };
       }

@@ -154,6 +154,7 @@ export type CardType =
   | 'guide_answer'
   | 'human_help_offer'
   | 'people_picks'
+  | 'agent_exchange'
   | 'request_draft'
   | 'request_checkout'
   | 'response_ready'

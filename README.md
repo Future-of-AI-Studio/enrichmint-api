@@ -130,6 +130,16 @@ Alex may already own some guides from earlier test runs. Running `yarn seed:demo
 - **Postman.** `yarn openapi:export` writes `postman/openapi.json` from the same document as Swagger. In Postman, choose Import and pick that file to get a collection of every endpoint, then import `postman/enrichmint.postman_environment.json` and set `baseUrl` and `bearerToken` (the `accessToken` from `POST /api/auth/login`).
 - **Zapier.** Set `ZAPIER_WEBHOOK_URL` to a Zapier "Catch Hook" URL. The API then posts `order.completed`, `request.sent`, `request.accepted`, `request.delivered`, `payout.succeeded`, `refund.completed` and `field_note.published`, after the change is committed. Payloads carry ids, amounts and states only, never emails or message content. A slow or failing Zapier never affects a payment.
 
+- **AG Studio (AG Grid).** The admin Dashboard tab in the web app is an AG Studio report over the server's own payment records: captured sales, PayPal fees, webhook events and payouts, with cross-filtering, our brand theme and an edit mode. It runs on the AG Studio trial, so it logs a licence notice in the browser console until a key is set.
+
+## Agent to agent: the contributor's agent
+
+Before the steward drafts a paid request to a person, it asks that person's own agent whether the question fits.
+- The contributor's agent reads only their published profile, boundaries and guide titles. It answers FITS, UNSURE or OUTSIDE with a short reason, and the learner sees both sides of the exchange.
+- Price, deadlines and budget fit come from the database, never from either agent.
+- The contributor's agent has no tools. It cannot accept, price, send or pay. The contributor still decides, and the learner still approves and pays through PayPal.
+- If the question is OUTSIDE (for example legal advice), the steward does not draft a request.
+
 ## Field notes (the enrichment loop)
 
 After trying a guide or a personal answer, a learner can turn their follow-up feedback into a short field note. The AI drafts it from their own words only. They edit it, and it is published only with `approved: true`.

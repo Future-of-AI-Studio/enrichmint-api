@@ -470,6 +470,80 @@ describe('Steward agent (e2e)', () => {
     expect(await ctx.prisma.order.count()).toBe(0);
   });
 
+  it('consults the contributor agent before drafting, with terms from the database', async () => {
+    const { maria, alex, sessionId } = await setup();
+    await ctx.prisma.contributorProfile.update({
+      where: { id: maria.profile.id },
+      data: { boundaries: 'No legal or tax questions.' },
+    });
+    ctx.ai.isConfigured = true;
+    ctx.ai.completions = [
+      {
+        fit: 'FITS',
+        reply: 'She left a support role herself. It costs $1.00, ask her.',
+        suggestedFocus: 'Ask about the conversation itself.',
+      },
+    ];
+    ctx.ai.steps = [
+      {
+        call: 'consult_contributor_agent',
+        args: {
+          contributorId: maria.profile.id,
+          question: 'How did you tell your manager? Mail me at a@b.co',
+        },
+      },
+      { final: { say: 'Her agent says it fits.', suggestedReplies: [] } },
+    ];
+    await say(sessionId, alex.token, 'Would Maria take this?').expect(200);
+
+    const state = await view(sessionId, alex.token);
+    const card = state.events.find((e) => e.payload.type === 'agent_exchange')!;
+    // Price and budget fit are the contributor's own stored terms, whatever the model wrote.
+    expect(card.payload.data).toMatchObject({
+      contributorId: maria.profile.id,
+      fit: 'FITS',
+      aiUsed: true,
+      priceCents: 1500,
+      withinBudget: true,
+    });
+    expect(String(card.payload.data!.stewardMessage)).not.toContain('a@b.co');
+    // The contributor agent saw the boundaries, wrapped as untrusted data.
+    const prompt = ctx.ai.seenInputs.find((input) =>
+      input.includes('contributor_profile'),
+    )!;
+    expect(prompt).toContain('No legal or tax questions.');
+    expect(prompt).not.toContain('a@b.co');
+    // Consulting commits nothing: no request and no order exist.
+    expect(await ctx.prisma.personalRequest.count()).toBe(0);
+    expect(await ctx.prisma.order.count()).toBe(0);
+  });
+
+  it('falls back to unsure when the contributor agent cannot run', async () => {
+    const { maria, alex, sessionId } = await setup();
+    ctx.ai.isConfigured = true;
+    ctx.ai.steps = [
+      {
+        call: 'consult_contributor_agent',
+        args: { contributorId: maria.profile.id, question: 'Does this fit?' },
+      },
+      {
+        call: 'consult_contributor_agent',
+        args: { contributorId: 'nobody', question: 'Does this fit?' },
+      },
+    ];
+    await say(sessionId, alex.token, 'Check with her agent').expect(200);
+    const state = await view(sessionId, alex.token);
+    const cards = state.events.filter(
+      (e) => e.payload.type === 'agent_exchange',
+    );
+    expect(cards).toHaveLength(1);
+    expect(cards[0].payload.data).toMatchObject({
+      fit: 'UNSURE',
+      aiUsed: false,
+      priceCents: 1500,
+    });
+  });
+
   it('rejects a draft that names both a guide and a person, or neither', async () => {
     const { maria, alex, sessionId } = await setup();
     ctx.ai.isConfigured = true;
