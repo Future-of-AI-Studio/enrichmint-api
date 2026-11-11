@@ -9,6 +9,7 @@ import { AdminModule } from './admin/admin.module';
 import { AppController } from './app.controller';
 import { AssistantModule } from './assistant/assistant.module';
 import { FeedbackModule } from './feedback/feedback.module';
+import { FieldNotesModule } from './field-notes/field-notes.module';
 import { GoalsModule } from './goals/goals.module';
 import { InterviewsModule } from './interviews/interviews.module';
 import { RequestsModule } from './requests/requests.module';
@@ -28,6 +29,7 @@ import { PolicyModule } from './policy/policy.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RefundsModule } from './refunds/refunds.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { ZapierModule } from './zapier/zapier.module';
 
 @Module({
   imports: [
@@ -58,6 +60,8 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     FeedbackModule,
     AdminModule,
     StewardModule,
+    FieldNotesModule,
+    ZapierModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: RateLimitGuard }],

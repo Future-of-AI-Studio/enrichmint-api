@@ -2,7 +2,7 @@
 
 EnrichMINT helps people earn from their real-life experience, while helping others learn from it.
 
-You tell the AI what you need help with. It finds relevant guidance from someone who's been through it, which you can pay to access. If you need a more personal answer, it connects you with that person for paid advice.
+A network of people helping each other, with AI as the matchmaker. You tell the AI what you need help with. It finds guidance from someone who has been through it, which you can pay to access. If you need a more personal answer, it finds the right person and sets up paid advice. Once you have tried the advice, you can publish a field note on what happened and earn a share of later sales. Every payment, refund and payout runs on PayPal (sandbox).
 
 Built for the PayPal AI Hackathon. The web app lives in `enrichmint-frontend`. The plan, decisions and progress live in [`PLAN.md`](./PLAN.md).
 
@@ -96,10 +96,53 @@ All accounts use `SEED_DEMO_PASSWORD`. Running `yarn seed:demo` again resets the
 | `alex@enrichmint.demo` | Learner |
 | `sam@`, `priya@`, `tomas@enrichmint.demo` | Other contributors. Sam's guide has AI assistance off; Priya's costs $25, which is over Alex's budget. |
 
+## Judge testing
+
+Everything runs on the PayPal **sandbox**: no real money moves.
+
+1. Open the web app and sign in as `alex@enrichmint.demo` with the demo password: `<DEMO PASSWORD>`.
+2. Pay with either of these at checkout:
+   - **Test card (no PayPal account needed):** press "Debit or Credit Card" and enter Visa `4012 0000 3333 0026`, any future expiry date (for example `12/30`), any 3-digit CVV, country United States, and any name, ZIP code, phone and email. This is one of PayPal's published sandbox test cards; more are on developer.paypal.com under Tools, Sandbox, Card testing.
+   - **PayPal sandbox buyer (optional):** press "Pay with PayPal" and sign in with email `<SANDBOX BUYER EMAIL>`, password `<SANDBOX BUYER PASSWORD>`. It has a fake balance.
+   - Buyers in the United States also see "Pay with Venmo" and "Pay Later". PayPal decides which buttons to offer from the buyer's location.
+3. A short path through the whole product (about 5 minutes):
+   - **Learn:** describe a goal in one of the catalogue's areas (caregiving, freelancing, learning a craft, moving abroad, starting a business, work transitions). Buy the guide the steward suggests. The library then shows the PayPal order and capture IDs.
+   - **Ask the person:** ask the guide something it does not cover. The steward drafts a paid question to the author. Send it, then sign in as `maria@enrichmint.demo`, accept and answer it. Back as Alex, pay for it and press "Help me apply this".
+   - **Give back:** leave the "Later: did you try it?" feedback with what happened, then draft and publish a field note.
+   - **See the money move:** sign in as `tomas@enrichmint.demo` and buy the same guide. Alex now earns a field note share (Share, then Earnings), and Maria earns her 85%. Either of them can pay out to PayPal and see the Payouts batch ID.
+   - **Admin:** `admin@enrichmint.demo` sees every PayPal order, capture, webhook event and payout ID under Admin, then Payments.
+
+Alex may already own some guides from earlier test runs. Running `yarn seed:demo` resets the demo passwords and data, or pick another guide.
+
+## PayPal APIs used
+
+| PayPal API | What EnrichMINT uses it for | Where |
+| --- | --- | --- |
+| JS SDK v6 (PayPal, Venmo, Pay Later, guest card buttons) | Checkout. Each button shows only when PayPal reports the buyer eligible. | `enrichmint-frontend/app/components/PayPalCheckout.tsx` |
+| Orders v2: create, capture, get | Guide purchases and paid personal answers. The price comes from our database; access is granted only after a COMPLETED capture for the exact amount. | `src/paypal/paypal.service.ts`, `src/orders/orders.service.ts` |
+| Payments v2: refund capture | Buyer refunds and automatic refunds for missed deliveries. Every ledger share is reversed. | `src/refunds/refunds.service.ts` |
+| Payouts v1: create, get batch | Contributors and field note authors withdraw their balance to their own PayPal account. | `src/payouts/payouts.service.ts` |
+| Webhooks: verify signature | Capture, refund and payout events, verified with PayPal and processed once. | `src/webhooks/webhooks.service.ts` |
+| `PayPal-Request-Id` | Idempotent create, capture and refund calls. | `src/paypal/paypal.service.ts` |
+
+## Partner integrations
+
+- **Postman.** `yarn openapi:export` writes `postman/openapi.json` from the same document as Swagger. In Postman, choose Import and pick that file to get a collection of every endpoint, then import `postman/enrichmint.postman_environment.json` and set `baseUrl` and `bearerToken` (the `accessToken` from `POST /api/auth/login`).
+- **Zapier.** Set `ZAPIER_WEBHOOK_URL` to a Zapier "Catch Hook" URL. The API then posts `order.completed`, `request.sent`, `request.accepted`, `request.delivered`, `payout.succeeded`, `refund.completed` and `field_note.published`, after the change is committed. Payloads carry ids, amounts and states only, never emails or message content. A slow or failing Zapier never affects a payment.
+
+## Field notes (the enrichment loop)
+
+After trying a guide or a personal answer, a learner can turn their follow-up feedback into a short field note. The AI drafts it from their own words only. They edit it, and it is published only with `approved: true`.
+- Published notes appear on the guide page and in the reader, marked as self-reported. The guide's assistant may mention them as "Another learner reported", never as the author's words.
+- Each later sale of that guide pays the note authors 5% (`ENRICHMENT_SHARE_BPS`), split evenly and **taken from the platform's 15% commission**. The guide author's 85% is unchanged. A refund reverses every share.
+- A learner with no contributor profile gets a lightweight `EARNER` profile. It can receive shares and pay out through PayPal Payouts, but it cannot sell until it applies and is approved.
+- Known trade-off: on a $5 sale the platform nets 75¢ commission minus the 66¢ sandbox PayPal fee minus 25¢ in note shares, so slightly negative. This is acceptable for the demo; production pricing would need a minimum price or a lower share.
+
 ## Steward agent
 
 `/api/steward/sessions` runs one agent per goal: an OpenAI tool loop of at most 6 calls per message, built on existing services.
-- **Its tools can:** find guides, read previews, ask a purchased guide, check whether the author takes personal requests (with budget fit), draft a request, prepare checkout cards, and turn a delivered answer into steps.
+- **Its tools can:** find guides, read previews, ask a purchased guide, find people in the network who have lived the learner's situation (`find_people`), check whether the author takes personal requests (with budget fit), draft a request to a guide author or a matched person, prepare checkout cards, and turn a delivered answer into steps.
+- **It does not give its own advice.** When nothing in the catalogue fits, it says so and offers people from the network instead of writing a free playbook.
 - **No tool can:** send a request, pay, capture, accept or change a budget. The learner does those, and the existing backend enforces them.
 - **Workflow status** is derived from database facts, never set by the model. Each view syncs changes made by payments, webhooks and deadline jobs into one update per change.
 - Plan and design: `docs/dev/steward-agent/plan.md`.
@@ -138,6 +181,7 @@ The e2e suites run against real Postgres, with PayPal faked at the module bounda
 - A forged webhook.
 - A budget blocked both sequentially and under parallel captures.
 - Refunds and payouts (success and "not enabled").
+- Field notes: consent required, the 5% share paid from commission to the note author, reversed on refund, and not paid for earlier sales.
 - Content and AI access control, including permission withdrawn after purchase.
 - Consent-limited request context.
 - Out-of-order and wrong-actor transitions.

@@ -15,12 +15,13 @@ import type { AuthenticatedUser } from 'src/common/types/authenticated-request.t
 import { toCents } from 'src/common/utils/money.util';
 import { EntitlementsService } from 'src/entitlements/entitlements.service';
 import { committedCents, lockGoal } from 'src/goals/utils/budget.util';
-import { LedgerService } from 'src/ledger/ledger.service';
+import { LedgerService, splitEnrichment } from 'src/ledger/ledger.service';
 import { PaypalError, PaypalService } from 'src/paypal/paypal.service';
 import type { PaypalCapture } from 'src/paypal/schemas/paypal.schema';
 import { PolicyService } from 'src/policy/policy.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { applyTransition } from 'src/requests/utils/apply-transition.util';
+import { ZapierService } from 'src/zapier/zapier.service';
 import type { CreateOrderDto } from './dto/create-order.dto';
 
 const OPEN_STATUSES = ['CREATED', 'APPROVED'] as const;
@@ -38,6 +39,9 @@ const ORDER_SUMMARY_SELECT = {
   failureReason: true,
   completedAt: true,
   createdAt: true,
+  // The buyer's own PayPal references, shown on their receipt.
+  paypalOrderId: true,
+  paypalCaptureId: true,
   guide: { select: { id: true, title: true, slug: true } },
 } as const;
 
@@ -70,6 +74,7 @@ export class OrdersService {
     private readonly entitlements: EntitlementsService,
     private readonly policy: PolicyService,
     private readonly audit: AuditService,
+    private readonly zapier: ZapierService,
   ) {}
 
   async create(user: AuthenticatedUser, dto: CreateOrderDto) {
@@ -362,6 +367,8 @@ export class OrdersService {
 
   private async fulfil(orderId: string, capture: PaypalCapture): Promise<void> {
     let needsRefundReview: string | null = null;
+    // reason: assigned inside the transaction callback, which TS flow analysis does not follow.
+    let completed = null as { kind: string; amountCents: number } | null;
 
     await this.prisma.$transaction(async (tx) => {
       const order = await tx.order.findUniqueOrThrow({
@@ -421,7 +428,36 @@ export class OrdersService {
         order.guide?.contributorId ?? order.request?.contributorId;
       if (!contributorId)
         throw new Error(`Order ${order.id} has no contributor.`);
-      await this.ledger.recordSale(tx, order, contributorId, feeCents);
+      // Learners who published a field note on this guide before this order earn a share of it.
+      const notes =
+        order.kind === 'GUIDE' && order.guideId
+          ? await tx.fieldNote.findMany({
+              where: {
+                guideId: order.guideId,
+                status: 'PUBLISHED',
+                publishedAt: { lt: order.createdAt },
+                payeeContributorId: { not: null },
+                authorUserId: { not: order.buyerId },
+              },
+              orderBy: { publishedAt: 'asc' },
+              select: { payeeContributorId: true },
+            })
+          : [];
+      const enrichment = splitEnrichment(
+        order.amountCents,
+        env.ENRICHMENT_SHARE_BPS,
+        notes
+          .map((note) => note.payeeContributorId!)
+          .filter((id) => id !== contributorId),
+      );
+      await this.ledger.recordSale(
+        tx,
+        order,
+        contributorId,
+        feeCents,
+        enrichment,
+      );
+      completed = { kind: order.kind, amountCents: order.amountCents };
 
       if (
         order.kind === 'GUIDE' &&
@@ -469,6 +505,15 @@ export class OrdersService {
         tx,
       );
     });
+
+    if (completed) {
+      this.zapier.notify('order.completed', {
+        orderId,
+        kind: completed.kind,
+        amountCents: completed.amountCents,
+        paypalCaptureId: capture.id,
+      });
+    }
 
     if (needsRefundReview) {
       const order = await this.prisma.order.findUniqueOrThrow({

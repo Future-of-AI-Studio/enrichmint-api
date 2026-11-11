@@ -12,6 +12,7 @@ import { PaypalError, PaypalService } from 'src/paypal/paypal.service';
 import type { PaypalRefund } from 'src/paypal/schemas/paypal.schema';
 import { PrismaService, TransactionClient } from 'src/prisma/prisma.service';
 import { applyTransition } from 'src/requests/utils/apply-transition.util';
+import { ZapierService } from 'src/zapier/zapier.service';
 
 const OPEN_REFUND = ['REQUESTED', 'APPROVED', 'SUBMITTED'] as const;
 
@@ -31,6 +32,7 @@ export class RefundsService {
     private readonly ledger: LedgerService,
     private readonly entitlements: EntitlementsService,
     private readonly audit: AuditService,
+    private readonly zapier: ZapierService,
   ) {}
 
   async request(userId: string, orderId: string, reason: string) {
@@ -239,7 +241,7 @@ export class RefundsService {
   }
 
   private async complete(refundId: string): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
+    const done = await this.prisma.$transaction(async (tx) => {
       const refund = await tx.refund.findUniqueOrThrow({
         where: { id: refundId },
       });
@@ -247,12 +249,12 @@ export class RefundsService {
         where: { id: refundId, status: { in: [...OPEN_REFUND] } },
         data: { status: 'COMPLETED' },
       });
-      if (marked.count === 0) return;
+      if (marked.count === 0) return null;
       const moved = await tx.order.updateMany({
         where: { id: refund.orderId, status: 'COMPLETED' },
         data: { status: 'REFUNDED' },
       });
-      if (moved.count === 0) return;
+      if (moved.count === 0) return null;
       await this.reverseEffects(tx, refund.orderId, refund.id);
       await this.audit.record(
         {
@@ -263,7 +265,15 @@ export class RefundsService {
         },
         tx,
       );
+      return refund;
     });
+    if (done) {
+      this.zapier.notify('refund.completed', {
+        refundId: done.id,
+        orderId: done.orderId,
+        amountCents: done.amountCents,
+      });
+    }
   }
 
   private async reverseEffects(

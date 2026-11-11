@@ -11,7 +11,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Roles } from 'src/common/decorators/access.decorators';
 import { AuthGuard } from 'src/common/guards/auth.guard';
-import { ContributorGuard } from 'src/common/guards/contributor.guard';
+import { PayeeGuard } from 'src/common/guards/payee.guard';
 import { RoleGuard } from 'src/common/guards/role.guard';
 import type { AuthenticatedUser } from 'src/common/types/authenticated-request.type';
 import { ContributorsService } from './contributors.service';
@@ -39,7 +39,7 @@ export class ContributorsController {
   }
 
   @Get('contributors/me')
-  @UseGuards(AuthGuard, ContributorGuard)
+  @UseGuards(AuthGuard, PayeeGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Contributor: my profile and request settings' })
   me(@CurrentUser() user: AuthenticatedUser) {
@@ -47,7 +47,7 @@ export class ContributorsController {
   }
 
   @Patch('contributors/me')
-  @UseGuards(AuthGuard, ContributorGuard)
+  @UseGuards(AuthGuard, PayeeGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({
     summary:

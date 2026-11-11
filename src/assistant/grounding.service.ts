@@ -1,4 +1,5 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
+import { scrubPii } from 'src/common/utils/pii.util';
 import { wrapUntrusted } from 'src/common/utils/prompt.util';
 import { EntitlementsService } from 'src/entitlements/entitlements.service';
 import { sectionsFrom } from 'src/guides/constants/guide-sections.constants';
@@ -77,6 +78,14 @@ export class GroundingService {
         body: section.body,
       }));
 
+    // Field notes are kept out of `sources` on purpose, so nothing a learner wrote can pass as the author's words.
+    const notes = await this.prisma.fieldNote.findMany({
+      where: { guideId, status: 'PUBLISHED', authorUserId: { not: userId } },
+      orderBy: { publishedAt: 'desc' },
+      take: 5,
+      select: { body: true },
+    });
+
     return {
       entitlementId: entitlement.id,
       guide: {
@@ -86,7 +95,14 @@ export class GroundingService {
         contributorName: guide.contributor.user.displayName,
       },
       sources,
-      promptText: sourcesPrompt(sources),
+      promptText: [
+        sourcesPrompt(sources),
+        ...notes.map((note, index) =>
+          wrapUntrusted('learner_field_note', scrubPii(note.body), {
+            id: `fn${index + 1}`,
+          }),
+        ),
+      ].join('\n\n'),
     };
   }
 }

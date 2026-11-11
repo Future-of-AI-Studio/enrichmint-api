@@ -18,6 +18,7 @@ import { ModelsService } from 'src/models/models.service';
 import { PolicyService } from 'src/policy/policy.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import type { ContextItemDto, UpdateRequestDto } from './dto/request.dto';
+import { ZapierService } from 'src/zapier/zapier.service';
 import { applyTransition } from './utils/apply-transition.util';
 
 const PROMPT_VERSION = 'request-draft-v1';
@@ -70,6 +71,7 @@ export class RequestsService {
     private readonly models: ModelsService,
     private readonly policy: PolicyService,
     private readonly audit: AuditService,
+    private readonly zapier: ZapierService,
   ) {}
 
   /** The agent prepares a draft; nothing is sent until the learner approves it. */
@@ -84,7 +86,42 @@ export class RequestsService {
       include: { contributor: true },
     });
     if (!guide) throw new NotFoundException('Guide not found.');
-    const contributor = guide.contributor;
+    return this.createDraft(user, guide.contributor, question, goalId, {
+      id: guide.id,
+      title: guide.title,
+    });
+  }
+
+  /** "Ask the network": a draft to a person the steward matched, with no guide behind it. */
+  async draftToPerson(
+    user: AuthenticatedUser,
+    contributorId: string,
+    question: string,
+    goalId?: string,
+  ) {
+    const contributor = await this.prisma.contributorProfile.findUnique({
+      where: { id: contributorId },
+    });
+    if (!contributor) throw new NotFoundException('Person not found.');
+    return this.createDraft(user, contributor, question, goalId, null);
+  }
+
+  private async createDraft(
+    user: AuthenticatedUser,
+    contributor: {
+      id: string;
+      userId: string;
+      status: string;
+      acceptingRequests: boolean;
+      responsePriceCents: number | null;
+      deliveryH: number;
+      acceptanceWindowH: number;
+      headline: string;
+    },
+    question: string,
+    goalId: string | undefined,
+    guide: { id: string; title: string } | null,
+  ) {
     if (contributor.userId === user.id) {
       throw new ForbiddenException({
         error: 'own_offering',
@@ -118,7 +155,9 @@ export class RequestsService {
         tier: 'fast',
         system: DRAFT_SYSTEM,
         input: [
-          `Guide: ${guide.title}`,
+          guide
+            ? `Guide: ${guide.title}`
+            : wrapUntrusted('contributor_experience', contributor.headline),
           goal ? wrapUntrusted('learner_situation', scrubPii(goal.text)) : '',
           wrapUntrusted('learner_question', scrubPii(question)),
         ].join('\n\n'),
@@ -151,7 +190,7 @@ export class RequestsService {
       data: {
         learnerId: user.id,
         contributorId: contributor.id,
-        guideId: guide.id,
+        guideId: guide?.id ?? null,
         goalId: goal?.id ?? null,
         question: output?.question ?? question,
         desiredResponse:
@@ -251,6 +290,10 @@ export class RequestsService {
       subjectId: requestId,
       details: { priceCents: request.priceCents },
     });
+    this.zapier.notify('request.sent', {
+      requestId,
+      priceCents: request.priceCents,
+    });
     return this.learnerView(user.id, requestId);
   }
 
@@ -284,6 +327,7 @@ export class RequestsService {
         },
       }),
     );
+    this.zapier.notify('request.accepted', { requestId });
     return this.contributorView(user.contributorId!, requestId);
   }
 
@@ -330,6 +374,7 @@ export class RequestsService {
         data: { requestId, body: body.trim(), aiUseAllowed },
       });
     });
+    this.zapier.notify('request.delivered', { requestId, aiUseAllowed });
     return {
       ...(await this.contributorView(user.contributorId!, requestId)),
       warnings: review.outcome === 'WARN' ? review.reasons : [],
@@ -450,7 +495,14 @@ export class RequestsService {
         },
         orders: {
           orderBy: { createdAt: 'desc' },
-          select: { id: true, status: true, amountCents: true },
+          select: {
+            id: true,
+            status: true,
+            amountCents: true,
+            paypalOrderId: true,
+            paypalCaptureId: true,
+            completedAt: true,
+          },
         },
       },
     });

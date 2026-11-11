@@ -409,6 +409,88 @@ describe('Steward agent (e2e)', () => {
     expect(state.events.at(-1)!.summary).toContain('I have done what I can');
   });
 
+  it('asks the network when no guide fits, and drafts to a person without a guide', async () => {
+    const { maria, alex, sessionId } = await setup();
+    ctx.ai.isConfigured = true;
+    ctx.ai.completions = [
+      {
+        picks: [
+          {
+            contributorId: maria.profile.id,
+            reason: 'She left a support role to freelance.',
+          },
+          { contributorId: 'not-a-real-person', reason: 'Invented.' },
+        ],
+      },
+    ];
+    ctx.ai.steps = [
+      { call: 'find_people', args: { query: 'leaving a support role' } },
+      {
+        call: 'draft_request',
+        args: {
+          guideId: null,
+          contributorId: maria.profile.id,
+          question: 'How did you tell your manager you were leaving?',
+        },
+      },
+      {
+        final: {
+          say: 'No guide covers this. Maria has lived it and answers for $15.00. I’ve drafted a request.',
+          suggestedReplies: ['Review it'],
+        },
+      },
+    ];
+    await say(sessionId, alex.token, 'How do I tell my manager?').expect(200);
+
+    const state = await view(sessionId, alex.token);
+    const card = state.events.find((e) => e.payload.type === 'people_picks')!;
+    const people = card.payload.data!.people as {
+      contributorId: string;
+      priceCents: number;
+      withinBudget: boolean;
+    }[];
+    // Only people from the candidate list survive; the invented id is dropped.
+    expect(people).toEqual([
+      expect.objectContaining({
+        contributorId: maria.profile.id,
+        priceCents: 1500,
+        withinBudget: true,
+      }),
+    ]);
+    const request = await ctx.prisma.personalRequest.findFirstOrThrow({
+      where: { learnerId: alex.id },
+    });
+    expect(request).toMatchObject({
+      state: 'DRAFT',
+      guideId: null,
+      contributorId: maria.profile.id,
+      priceCents: 1500,
+    });
+    expect(state.stage).toBe('REQUEST_DRAFT');
+    expect(await ctx.prisma.order.count()).toBe(0);
+  });
+
+  it('rejects a draft that names both a guide and a person, or neither', async () => {
+    const { maria, alex, sessionId } = await setup();
+    ctx.ai.isConfigured = true;
+    ctx.ai.steps = [
+      {
+        call: 'draft_request',
+        args: {
+          guideId: maria.guide.id,
+          contributorId: maria.profile.id,
+          question: 'Which one is it?',
+        },
+      },
+      {
+        call: 'draft_request',
+        args: { guideId: null, contributorId: null, question: 'To whom?' },
+      },
+    ];
+    await say(sessionId, alex.token, 'Draft it').expect(200);
+    expect(await ctx.prisma.personalRequest.count()).toBe(0);
+  });
+
   it('keeps the status working without AI', async () => {
     const { alex, sessionId } = await setup();
     const turn = await say(sessionId, alex.token, 'Hello').expect(503);

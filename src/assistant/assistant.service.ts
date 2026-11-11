@@ -309,6 +309,8 @@ export class AssistantService {
           `My question was: ${request.question}\nHelp me turn this into concrete next steps for my situation.`,
         ),
       ),
+      // Outside the untrusted tags on purpose: this is our formatting rule, so the UI can show a checklist.
+      'Format: write the steps inside AI_SUGGESTION blocks, one step per line, each line starting with "- ".',
     ]
       .filter(Boolean)
       .join('\n\n');

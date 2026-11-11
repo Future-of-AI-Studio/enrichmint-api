@@ -1,5 +1,10 @@
+import type { INestApplication } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import {
+  DocumentBuilder,
+  type OpenAPIObject,
+  SwaggerModule,
+} from '@nestjs/swagger';
 import { timingSafeEqual } from 'crypto';
 import type { NextFunction, Request, Response } from 'express';
 import { env, isProduction } from 'src/config/env';
@@ -37,8 +42,8 @@ function swaggerBasicAuth(req: Request, res: Response, next: NextFunction) {
   res.status(401).send('Authentication required');
 }
 
-export function setupSwagger(app: NestExpressApplication): void {
-  app.use(swaggerBasicAuth);
+/** The OpenAPI document; shared by /docs and `yarn openapi:export` (Postman import). */
+export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
   const config = new DocumentBuilder()
     .setTitle('EnrichMINT API')
     .setDescription(
@@ -50,7 +55,10 @@ export function setupSwagger(app: NestExpressApplication): void {
       'access-token',
     )
     .build();
-  SwaggerModule.setup(DOCS_PATH, app, () =>
-    SwaggerModule.createDocument(app, config),
-  );
+  return SwaggerModule.createDocument(app, config);
+}
+
+export function setupSwagger(app: NestExpressApplication): void {
+  app.use(swaggerBasicAuth);
+  SwaggerModule.setup(DOCS_PATH, app, () => buildOpenApiDocument(app));
 }

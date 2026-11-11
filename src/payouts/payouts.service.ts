@@ -10,6 +10,7 @@ import { AuditService } from 'src/audit/audit.service';
 import { LedgerService } from 'src/ledger/ledger.service';
 import { PaypalError, PaypalService } from 'src/paypal/paypal.service';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { ZapierService } from 'src/zapier/zapier.service';
 
 const MIN_PAYOUT_CENTS = 100;
 
@@ -36,6 +37,7 @@ export class PayoutsService {
     private readonly paypal: PaypalService,
     private readonly ledger: LedgerService,
     private readonly audit: AuditService,
+    private readonly zapier: ZapierService,
   ) {}
 
   async request(contributorId: string, actorId: string) {
@@ -138,10 +140,17 @@ export class PayoutsService {
     }
 
     if (transactionStatus === 'SUCCESS') {
-      await this.prisma.payout.updateMany({
+      const succeeded = await this.prisma.payout.updateMany({
         where: { id: payout.id, status: { in: ['PENDING', 'UNCLAIMED'] } },
         data: { status: 'SUCCESS' },
       });
+      if (succeeded.count > 0) {
+        this.zapier.notify('payout.succeeded', {
+          payoutId: payout.id,
+          amountCents: payout.amountCents,
+          paypalBatchId: batchId,
+        });
+      }
       return 'payout succeeded';
     }
     if (transactionStatus === 'UNCLAIMED') {

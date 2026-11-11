@@ -25,7 +25,8 @@
     "postinstall": "prisma generate",
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",
-    "seed:demo": "node dist/src/prisma/seeders/demo.seeder.js"
+    "seed:demo": "node dist/src/prisma/seeders/demo.seeder.js",
+    "openapi:export": "nest build && node dist/src/openapi.export.js"
   },
   "jest": {
     "moduleFileExtensions": [

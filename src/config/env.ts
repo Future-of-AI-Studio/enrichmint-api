@@ -90,6 +90,8 @@ export const envSchema = z.object({
   // ─── Marketplace economics ───
   // Platform commission in basis points (1500 = 15%). Snapshotted onto every order.
   COMMISSION_BPS: intWithDefault(1500, 0, 5000),
+  // Share of each guide sale paid to field note authors, out of the platform commission (500 = 5%).
+  ENRICHMENT_SHARE_BPS: intWithDefault(500, 0, 1000),
   // Lowest guide or response price a contributor may set, in cents.
   MIN_PRICE_CENTS: intWithDefault(500, 100, 100000),
   MAX_PRICE_CENTS: intWithDefault(50000, 100, 1000000),
@@ -138,6 +140,11 @@ export const envSchema = z.object({
   HCAI_BASE_URL: optionalString(),
   HCAI_API_KEY: optionalString(),
   HCAI_TIMEOUT_MS: intWithDefault(3000, 500, 30000),
+
+  // ─── Zapier (optional outbound events) ───
+  // A Zapier "Catch Hook" URL. When set, marketplace events (ids, amounts, states; never emails or content) are posted to it.
+  ZAPIER_WEBHOOK_URL: optionalString(),
+  ZAPIER_TIMEOUT_MS: intWithDefault(3000, 500, 30000),
 
   // ─── Jobs ───
   // Request expiry, overdue and reconciliation ticks (default true; specs turn it off).

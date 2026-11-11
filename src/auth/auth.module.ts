@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { env } from 'src/config/env';
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import { ContributorGuard } from 'src/common/guards/contributor.guard';
+import { PayeeGuard } from 'src/common/guards/payee.guard';
 import { RoleGuard } from 'src/common/guards/role.guard';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -27,7 +28,7 @@ import { AuthService } from './auth.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, AuthGuard, RoleGuard, ContributorGuard],
-  exports: [AuthGuard, RoleGuard, ContributorGuard],
+  providers: [AuthService, AuthGuard, RoleGuard, ContributorGuard, PayeeGuard],
+  exports: [AuthGuard, RoleGuard, ContributorGuard, PayeeGuard],
 })
 export class AuthModule {}

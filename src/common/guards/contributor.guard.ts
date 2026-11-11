@@ -13,7 +13,7 @@ export class ContributorGuard implements CanActivate {
     const user = context
       .switchToHttp()
       .getRequest<AuthenticatedRequest>().authenticatedUser;
-    if (!user?.contributorId) {
+    if (!user?.contributorId || user.contributorStatus === 'EARNER') {
       throw new ForbiddenException({
         error: 'contributor_required',
         message: 'Set up your contributor profile first.',

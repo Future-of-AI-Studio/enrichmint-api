@@ -8,17 +8,12 @@ import { ModelsService } from 'src/models/models.service';
 import { scrubPii } from 'src/common/utils/pii.util';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { GoalsService } from './goals.service';
+import { STOP_WORDS } from './utils/keyword-overlap.util';
 
 const PROMPT_VERSION = 'recommend-v1';
 const MAX_PICKS = 3;
 /** Guides with fewer feedback responses than this count as new, and may take the reserved discovery slot. */
 const NEW_CONTRIBUTOR_THRESHOLD = 5;
-
-const STOP_WORDS = new Set(
-  'the and for with that this have from your about what want know where start just they them their been were will would could should into than then also very much some more most only over such because while which there here when how why who our out not but are was had has can'.split(
-    ' ',
-  ),
-);
 
 const recommendSchema = z.object({
   picks: z

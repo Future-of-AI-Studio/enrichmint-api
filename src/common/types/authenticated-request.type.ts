@@ -1,5 +1,5 @@
 import type { Request } from 'express';
-import type { UserRole } from 'generated/prisma/client';
+import type { ContributorStatus, UserRole } from 'generated/prisma/client';
 
 /** Claims inside the session JWT. Never add roles or secrets. */
 export interface AuthTokenPayload {
@@ -17,6 +17,8 @@ export interface AuthenticatedUser {
   /** Set when the user has a contributor profile (any status). */
   contributorId: string | null;
   contributorApproved: boolean;
+  /** EARNER means a field note author: can be paid, cannot sell. */
+  contributorStatus: ContributorStatus | null;
 }
 
 export interface AuthenticatedRequest extends Request {

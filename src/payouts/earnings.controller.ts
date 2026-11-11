@@ -3,7 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { env } from 'src/config/env';
 import { CurrentUser } from 'src/common/decorators/access.decorators';
 import { AuthGuard } from 'src/common/guards/auth.guard';
-import { ContributorGuard } from 'src/common/guards/contributor.guard';
+import { PayeeGuard } from 'src/common/guards/payee.guard';
 import type { AuthenticatedUser } from 'src/common/types/authenticated-request.type';
 import { LedgerService } from 'src/ledger/ledger.service';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -11,7 +11,7 @@ import { PayoutsService } from './payouts.service';
 
 @ApiTags('Earnings')
 @ApiBearerAuth('access-token')
-@UseGuards(AuthGuard, ContributorGuard)
+@UseGuards(AuthGuard, PayeeGuard)
 @Controller()
 export class EarningsController {
   constructor(
@@ -46,6 +46,7 @@ export class EarningsController {
           currency: true,
           commissionBps: true,
           paypalFeeCents: true,
+          paypalCaptureId: true,
           completedAt: true,
           guide: { select: { title: true } },
           request: { select: { id: true, question: true } },

@@ -65,6 +65,7 @@ export class AuthGuard implements CanActivate {
       role: user.role,
       contributorId: user.contributorProfile?.id ?? null,
       contributorApproved: user.contributorProfile?.status === 'APPROVED',
+      contributorStatus: user.contributorProfile?.status ?? null,
     };
     return true;
   }

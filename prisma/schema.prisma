@@ -46,6 +46,7 @@ model User {
   modelCalls         ModelCall[]
   policyDecisions    PolicyDecision[]
   stewardSessions    StewardSession[]
+  fieldNotes         FieldNote[]
 
   @@map("users")
 }
@@ -54,6 +55,8 @@ enum ContributorStatus {
   PENDING
   APPROVED
   SUSPENDED
+  // A learner who published a field note: can earn note shares and withdraw, cannot sell.
+  EARNER
 }
 
 model ContributorProfile {
@@ -77,6 +80,7 @@ model ContributorProfile {
   requests      PersonalRequest[] @relation("RequestContributor")
   ledgerEntries LedgerEntry[]
   payouts       Payout[]
+  fieldNotes    FieldNote[]
 
   @@map("contributor_profiles")
 }
@@ -155,6 +159,7 @@ model Guide {
   requests          PersonalRequest[]
   assistantMessages AssistantMessage[]
   gaps              GuideGap[]
+  fieldNotes        FieldNote[]
 
   @@index([contributorId])
   @@index([categoryId])
@@ -227,6 +232,44 @@ model GuideGap {
   @@index([guideId])
   @@index([userId])
   @@map("guide_gaps")
+}
+
+enum FieldNoteSource {
+  GUIDE
+  RESPONSE
+}
+
+enum FieldNoteStatus {
+  DRAFT
+  PUBLISHED
+  HIDDEN
+}
+
+// What happened when a learner tried a guide or a personal answer. Published only with their approval.
+model FieldNote {
+  id                 String          @id @default(cuid())
+  guideId            String          @map("guide_id")
+  authorUserId       String          @map("author_user_id")
+  // Set on publish: the profile that receives field note shares.
+  payeeContributorId String?         @map("payee_contributor_id")
+  source             FieldNoteSource
+  // The guide id or the personal request id the outcome came from.
+  sourceId           String          @map("source_id")
+  body               String          @db.Text
+  status             FieldNoteStatus @default(DRAFT)
+  hiddenReason       String?         @map("hidden_reason") @db.VarChar(300)
+  publishedAt        DateTime?       @map("published_at") @db.Timestamptz(6)
+  createdAt          DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  guide  Guide               @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  author User                @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+  payee  ContributorProfile? @relation(fields: [payeeContributorId], references: [id])
+
+  @@unique([authorUserId, guideId])
+  @@index([guideId, status])
+  @@index([payeeContributorId])
+  @@map("field_notes")
 }
 
 // ─── Learners ────────────────────────────────────────────────────────────

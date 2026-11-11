@@ -6,6 +6,7 @@ import type { AuthenticatedUser } from 'src/common/types/authenticated-request.t
 import { formatUsd } from 'src/common/utils/money.util';
 import { wrapUntrusted } from 'src/common/utils/prompt.util';
 import { DiscoveryService } from 'src/goals/discovery.service';
+import { PeopleService } from 'src/goals/people.service';
 import { GuidesService, PUBLIC_GUIDE_SELECT } from 'src/guides/guides.service';
 import type { ToolSpec } from 'src/models/openai.adapter';
 import { PolicyService } from 'src/policy/policy.service';
@@ -44,7 +45,29 @@ const ARGS = {
   get_guide_preview: z.object({ guideId: idArg }),
   ask_guide: z.object({ guideId: idArg, question: questionArg }),
   check_contributor: z.object({ guideId: idArg, question: questionArg }),
-  draft_request: z.object({ guideId: idArg, question: questionArg }),
+  find_people: z.object({
+    query: z
+      .string()
+      .max(300)
+      .nullish()
+      .transform((value) => value ?? ''),
+  }),
+  // Exactly one target; a missing one becomes '' so every tool's args stay plain strings.
+  draft_request: z
+    .object({
+      guideId: z
+        .string()
+        .max(40)
+        .nullish()
+        .transform((value) => value ?? ''),
+      contributorId: z
+        .string()
+        .max(40)
+        .nullish()
+        .transform((value) => value ?? ''),
+      question: questionArg,
+    })
+    .refine((args) => Boolean(args.guideId) !== Boolean(args.contributorId)),
   prepare_guide_checkout: z.object({ guideId: idArg }),
   prepare_request_checkout: z.object({ requestId: idArg }),
   apply_response: z.object({ requestId: idArg }),
@@ -110,10 +133,32 @@ export const STEWARD_TOOL_SPECS: ToolSpec[] = [
     parameters: strictObject({ guideId: guideIdProp, question: questionProp }),
   },
   {
+    name: 'find_people',
+    description:
+      'Ask the network: find up to 3 real people whose own lived experience fits the learner goal and who take paid personal requests, with price and budget fit. Use when no guide fits or a guide cannot answer. Read-only.',
+    parameters: strictObject({
+      query: {
+        type: ['string', 'null'],
+        description:
+          'What the learner needs help with right now, in a few words. Null to search by the goal alone.',
+      },
+    }),
+  },
+  {
     name: 'draft_request',
     description:
-      'Draft a personal request to the guide author. Creates a DRAFT only; the learner reviews, chooses what to share and sends it themselves.',
-    parameters: strictObject({ guideId: guideIdProp, question: questionProp }),
+      'Draft a personal request to a guide author (pass guideId) or to a person from find_people (pass contributorId). Exactly one of the two. Creates a DRAFT only; the learner reviews, chooses what to share and sends it themselves.',
+    parameters: strictObject({
+      guideId: {
+        type: ['string', 'null'],
+        description: 'A guide id from a previous tool result, or null.',
+      },
+      contributorId: {
+        type: ['string', 'null'],
+        description: 'A person id from find_people, or null.',
+      },
+      question: questionProp,
+    }),
   },
   {
     name: 'prepare_guide_checkout',
@@ -150,6 +195,7 @@ export class StewardTools {
     private readonly prisma: PrismaService,
     private readonly state: StewardStateService,
     private readonly discovery: DiscoveryService,
+    private readonly people: PeopleService,
     private readonly guides: GuidesService,
     private readonly assistant: AssistantService,
     private readonly requests: RequestsService,
@@ -356,6 +402,46 @@ export class StewardTools {
         };
       }
 
+      case 'find_people': {
+        const result = await this.people.find(
+          user.id,
+          session.goalId,
+          args.query,
+        );
+        const people = result.people.map((person) => ({
+          ...person,
+          price: formatUsd(person.priceCents),
+        }));
+        return {
+          output: {
+            ok: true,
+            remainingBudget: result.remainingBudget,
+            noneFound: people.length === 0,
+            people: people.map((person) => ({
+              contributorId: person.contributorId,
+              name: person.name,
+              price: person.price,
+              withinBudget: person.withinBudget,
+              untrusted_content: wrapUntrusted(
+                'person_match',
+                `${person.headline}\nWhy: ${person.reason}`,
+              ),
+            })),
+          },
+          summary: people.length
+            ? `Asked the network: found ${people.length} ${people.length === 1 ? 'person who has' : 'people who have'} lived this.`
+            : 'Asked the network: no one with this experience yet.',
+          card: {
+            type: 'people_picks',
+            data: {
+              aiUsed: result.aiUsed,
+              remainingBudgetCents: result.remainingBudgetCents,
+              people,
+            },
+          },
+        };
+      }
+
       case 'draft_request': {
         const active = session.activeRequestId
           ? await this.prisma.personalRequest.findFirst({
@@ -380,12 +466,19 @@ export class StewardTools {
             'There is already an open request in this conversation.',
           );
         }
-        const draft = await this.requests.draftFromGap(
-          user,
-          args.guideId,
-          args.question,
-          session.goalId,
-        );
+        const draft = args.guideId
+          ? await this.requests.draftFromGap(
+              user,
+              args.guideId,
+              args.question,
+              session.goalId,
+            )
+          : await this.requests.draftToPerson(
+              user,
+              args.contributorId,
+              args.question,
+              session.goalId,
+            );
         const name = draft.contributor.user.displayName;
         return {
           output: {

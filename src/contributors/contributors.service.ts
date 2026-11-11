@@ -39,11 +39,22 @@ export class ContributorsService {
       where: { userId },
       select: OWN_PROFILE_SELECT,
     });
-    if (existing) return existing;
-    const profile = await this.prisma.contributorProfile.create({
-      data: { userId, headline: dto.headline, background: dto.background },
-      select: OWN_PROFILE_SELECT,
-    });
+    if (existing && existing.status !== 'EARNER') return existing;
+    // A field note author keeps the same profile (and its earnings) when applying to sell.
+    const profile = existing
+      ? await this.prisma.contributorProfile.update({
+          where: { id: existing.id },
+          data: {
+            status: 'PENDING',
+            headline: dto.headline,
+            background: dto.background,
+          },
+          select: OWN_PROFILE_SELECT,
+        })
+      : await this.prisma.contributorProfile.create({
+          data: { userId, headline: dto.headline, background: dto.background },
+          select: OWN_PROFILE_SELECT,
+        });
     await this.audit.record({
       actorId: userId,
       actorType: 'USER',
@@ -112,7 +123,8 @@ export class ContributorsService {
 
   listForAdmin(status?: 'PENDING' | 'APPROVED' | 'SUSPENDED') {
     return this.prisma.contributorProfile.findMany({
-      where: status ? { status } : {},
+      // Field note authors (EARNER) are not sellers, so they are not in the review list.
+      where: status ? { status } : { status: { not: 'EARNER' } },
       orderBy: { createdAt: 'desc' },
       take: 100,
       select: {

@@ -153,6 +153,7 @@ export type CardType =
   | 'guide_checkout'
   | 'guide_answer'
   | 'human_help_offer'
+  | 'people_picks'
   | 'request_draft'
   | 'request_checkout'
   | 'response_ready'

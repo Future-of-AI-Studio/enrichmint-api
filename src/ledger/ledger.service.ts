@@ -31,6 +31,33 @@ export function splitSale(
   };
 }
 
+export interface EnrichmentShare {
+  contributorId: string;
+  cents: number;
+}
+
+/**
+ * Field note shares for one sale: a pool of `bps` of the gross, paid out of the
+ * platform commission and split evenly; leftover cents go to the earliest notes.
+ */
+export function splitEnrichment(
+  grossCents: number,
+  bps: number,
+  payeeIds: string[],
+): EnrichmentShare[] {
+  const payees = [...new Set(payeeIds)];
+  if (payees.length === 0 || bps <= 0) return [];
+  const pool = bpsOf(grossCents, bps);
+  const base = Math.floor(pool / payees.length);
+  const remainder = pool - base * payees.length;
+  return payees
+    .map((contributorId, index) => ({
+      contributorId,
+      cents: base + (index < remainder ? 1 : 0),
+    }))
+    .filter((share) => share.cents > 0);
+}
+
 interface EntryInput {
   account: LedgerAccount;
   amountCents: number;
@@ -57,6 +84,7 @@ export class LedgerService {
     },
     contributorId: string,
     processingFeeCents: number,
+    enrichment: EnrichmentShare[] = [],
   ): Promise<SaleSplit> {
     const split = splitSale(
       order.amountCents,
@@ -86,6 +114,36 @@ export class LedgerService {
         memo: `${label}: PayPal fee (paid by platform)`,
       },
     ]);
+    for (const share of enrichment) {
+      // The author's 85% is untouched: each field note share comes out of the platform commission.
+      await this.write(
+        tx,
+        contributorId,
+        order.currency,
+        { orderId: order.id },
+        [
+          {
+            account: 'PLATFORM_COMMISSION',
+            amountCents: -share.cents,
+            memo: `${label}: field note share paid from platform commission`,
+          },
+        ],
+      );
+      await this.write(
+        tx,
+        share.contributorId,
+        order.currency,
+        { orderId: order.id },
+        [
+          {
+            account: 'CONTRIBUTOR_PAYABLE',
+            amountCents: share.cents,
+            memo: 'Field note share',
+            availableAt,
+          },
+        ],
+      );
+    }
     return split;
   }
 
@@ -125,6 +183,48 @@ export class LedgerService {
         },
       ],
     );
+    // Field note shares on this sale are reversed too, read back from the sale's own rows.
+    const shares = await tx.ledgerEntry.groupBy({
+      by: ['contributorId'],
+      where: {
+        orderId: order.id,
+        account: 'CONTRIBUTOR_PAYABLE',
+        refundId: null,
+        payoutId: null,
+        contributorId: { not: contributorId },
+      },
+      _sum: { amountCents: true },
+    });
+    for (const share of shares) {
+      const cents = share._sum.amountCents ?? 0;
+      if (!share.contributorId || cents <= 0) continue;
+      await this.write(
+        tx,
+        contributorId,
+        order.currency,
+        { orderId: order.id, refundId },
+        [
+          {
+            account: 'PLATFORM_COMMISSION',
+            amountCents: cents,
+            memo: 'Refund: field note share returned to platform',
+          },
+        ],
+      );
+      await this.write(
+        tx,
+        share.contributorId,
+        order.currency,
+        { orderId: order.id, refundId },
+        [
+          {
+            account: 'CONTRIBUTOR_PAYABLE',
+            amountCents: -cents,
+            memo: 'Refund: field note share reversed',
+          },
+        ],
+      );
+    }
   }
 
   /** Reserves the payout amount when it is requested; `reversePayout` returns it if PayPal fails. */

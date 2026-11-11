@@ -1,0 +1,3190 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/health": {
+      "get": {
+        "operationId": "AppController_health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Public: health check, plus which optional services are configured",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Public: sign in with email and password",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/signup": {
+      "post": {
+        "operationId": "AuthController_signUp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignUpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Public: create an account and sign in",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Public: sign out (revokes every session of the caller)",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "operationId": "AuthController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Signed-in user: get the current user",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/stewardship-log": {
+      "get": {
+        "operationId": "PolicyController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Signed-in user: plain-language list of times the system intervened for me",
+        "tags": [
+          "Stewardship"
+        ]
+      }
+    },
+    "/api/categories": {
+      "get": {
+        "operationId": "CategoriesController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Public: active categories (data, so new domains need no code change)",
+        "tags": [
+          "Categories"
+        ]
+      }
+    },
+    "/api/contributors/apply": {
+      "post": {
+        "operationId": "ContributorsController_apply",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyContributorDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Signed-in user: become a contributor (starts as pending review)",
+        "tags": [
+          "Contributors"
+        ]
+      }
+    },
+    "/api/contributors/me": {
+      "get": {
+        "operationId": "ContributorsController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Contributor: my profile and request settings",
+        "tags": [
+          "Contributors"
+        ]
+      },
+      "patch": {
+        "operationId": "ContributorsController_update",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateContributorDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Contributor: update profile, payout email and personalized-request settings",
+        "tags": [
+          "Contributors"
+        ]
+      }
+    },
+    "/api/contributors/{id}": {
+      "get": {
+        "operationId": "ContributorsController_publicProfile",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Public: an approved contributor and their published guides",
+        "tags": [
+          "Contributors"
+        ]
+      }
+    },
+    "/api/admin/contributors": {
+      "get": {
+        "operationId": "ContributorsController_list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Admin: contributors, optionally by status",
+        "tags": [
+          "Contributors"
+        ]
+      }
+    },
+    "/api/admin/contributors/{id}/approve": {
+      "post": {
+        "operationId": "ContributorsController_approve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Admin: approve a contributor",
+        "tags": [
+          "Contributors"
+        ]
+      }
+    },
+    "/api/admin/contributors/{id}/suspend": {
+      "post": {
+        "operationId": "ContributorsController_suspend",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Admin: suspend a contributor",
+        "tags": [
+          "Contributors"
+        ]
+      }
+    },
+    "/api/guides": {
+      "get": {
+        "operationId": "GuidesController_list",
+        "parameters": [
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Public: browse published guides (previews only)",
+        "tags": [
+          "Guides"
+        ]
+      }
+    },
+    "/api/guides/by-slug/{slug}": {
+      "get": {
+        "operationId": "GuidesController_get",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Public: one guide preview (never the full content)",
+        "tags": [
+          "Guides"
+        ]
+      }
+    },
+    "/api/guides/{id}/content": {
+      "get": {
+        "operationId": "GuidesController_content",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Buyer, owner or admin: full guide content. 403 not_entitled for everyone else.",
+        "tags": [
+          "Guides"
+        ]
+      }
+    },
+    "/api/library": {
+      "get": {
+        "operationId": "GuidesController_library",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Buyer: guides I have bought",
+        "tags": [
+          "Guides"
+        ]
+      }
+    },
+    "/api/studio/guides": {
+      "get": {
+        "operationId": "GuidesController_mine",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Contributor: my guides",
+        "tags": [
+          "Guides"
+        ]
+      }
+    },
+    "/api/studio/guides/{id}": {
+      "get": {
+        "operationId": "GuidesController_owned",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Contributor: one guide with its newest draft and permission history",
+        "tags": [
+          "Guides"
+        ]
+      }
+    },
+    "/api/studio/guides/{id}/draft": {
+      "patch": {
+        "operationId": "GuidesController_updateDraft",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDraftDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Contributor: edit the draft (a reviewed version is frozen; this starts a new one)",
+        "tags": [
+          "Guides"
+        ]
+      }
+    },
+    "/api/studio/guides/{id}/settings": {
+      "patch": {
+        "operationId": "GuidesController_updateSettings",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGuideSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Contributor: price, AI-assist permission, topics and category",
+        "tags": [
+          "Guides"
+        ]
+      }
+    },
+    "/api/studio/guides/{id}/submit": {
+      "post": {
+        "operationId": "GuidesController_submit",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Contributor: send the draft for admin review",
+        "tags": [
+          "Guides"
+        ]
+      }
+    },
+    "/api/studio/guides/{id}/unpublish": {
+      "post": {
+        "operationId": "GuidesController_unpublish",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Contributor: stop selling (existing buyers keep reading access)",
+        "tags": [
+          "Guides"
+        ]
+      }
+    },
+    "/api/studio/guides/{id}/republish": {
+      "post": {
+        "operationId": "GuidesController_republish",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Contributor: list an unpublished guide again",
+        "tags": [
+          "Guides"
+        ]
+      }
+    },
+    "/api/admin/review-queue": {
+      "get": {
+        "operationId": "GuidesController_queue",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Admin: guide versions waiting for review",
+        "tags": [
+          "Guides"
+        ]
+      }
+    },
+    "/api/admin/guide-versions/{id}/approve": {
+      "post": {
+        "operationId": "GuidesController_approve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Admin: approve and publish a guide version",
+        "tags": [
+          "Guides"
+        ]
+      }
+    },
+    "/api/admin/guide-versions/{id}/reject": {
+      "post": {
+        "operationId": "GuidesController_reject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewDecisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Admin: reject a guide version with a note",
+        "tags": [
+          "Guides"
+        ]
+      }
+    },
+    "/api/admin/guides/{id}/remove": {
+      "post": {
+        "operationId": "GuidesController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewDecisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Admin: remove a guide for a policy violation (revokes access)",
+        "tags": [
+          "Guides"
+        ]
+      }
+    },
+    "/api/orders": {
+      "post": {
+        "operationId": "OrdersController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Buyer: start a PayPal checkout for a guide or an accepted request (price comes from the server)",
+        "tags": [
+          "Orders"
+        ]
+      },
+      "get": {
+        "operationId": "OrdersController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Buyer: my orders",
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/api/orders/{id}/capture": {
+      "post": {
+        "operationId": "OrdersController_capture",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Buyer: capture after PayPal approval. Access is granted only when PayPal confirms the capture.",
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/api/orders/{id}": {
+      "get": {
+        "operationId": "OrdersController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Buyer: one order and its payment status",
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/api/refunds": {
+      "post": {
+        "operationId": "RefundsController_request",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestRefundDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Buyer: ask for a refund (approved automatically when a paid response was not delivered on time)",
+        "tags": [
+          "Refunds"
+        ]
+      },
+      "get": {
+        "operationId": "RefundsController_mine",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Buyer: my refunds",
+        "tags": [
+          "Refunds"
+        ]
+      }
+    },
+    "/api/admin/refunds": {
+      "get": {
+        "operationId": "RefundsController_all",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Admin: all refunds",
+        "tags": [
+          "Refunds"
+        ]
+      }
+    },
+    "/api/admin/refunds/{id}/decision": {
+      "post": {
+        "operationId": "RefundsController_decide",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideRefundDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Admin: approve (sends to PayPal) or reject a refund",
+        "tags": [
+          "Refunds"
+        ]
+      }
+    },
+    "/api/earnings/me": {
+      "get": {
+        "operationId": "EarningsController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Contributor: earned, available, payout pending and transferred amounts, kept separate, plus each sale with its fee breakdown",
+        "tags": [
+          "Earnings"
+        ]
+      }
+    },
+    "/api/payouts": {
+      "post": {
+        "operationId": "EarningsController_request",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Contributor: send my available balance to my PayPal (sandbox) email",
+        "tags": [
+          "Earnings"
+        ]
+      }
+    },
+    "/api/interviews/questions": {
+      "get": {
+        "operationId": "InterviewsController_questions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Contributor: the interview questions",
+        "tags": [
+          "Interviews"
+        ]
+      }
+    },
+    "/api/interviews": {
+      "get": {
+        "operationId": "InterviewsController_mine",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Contributor: my interviews",
+        "tags": [
+          "Interviews"
+        ]
+      },
+      "post": {
+        "operationId": "InterviewsController_start",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Contributor: start \"Share my experience\"",
+        "tags": [
+          "Interviews"
+        ]
+      }
+    },
+    "/api/interviews/{id}": {
+      "get": {
+        "operationId": "InterviewsController_view",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Contributor: one interview with the next question",
+        "tags": [
+          "Interviews"
+        ]
+      }
+    },
+    "/api/interviews/{id}/answers": {
+      "post": {
+        "operationId": "InterviewsController_answer",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Contributor: answer a question (AI may ask one follow-up)",
+        "tags": [
+          "Interviews"
+        ]
+      }
+    },
+    "/api/interviews/{id}/draft": {
+      "post": {
+        "operationId": "InterviewsController_draft",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftGuideDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Contributor: turn the answers into a draft guide. Missing information becomes gap questions, never invented text.",
+        "tags": [
+          "Interviews"
+        ]
+      }
+    },
+    "/api/goals": {
+      "post": {
+        "operationId": "GoalsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGoalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: \"What are you trying to figure out?\" plus a budget",
+        "tags": [
+          "Goals"
+        ]
+      },
+      "get": {
+        "operationId": "GoalsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: my goals",
+        "tags": [
+          "Goals"
+        ]
+      }
+    },
+    "/api/goals/{id}": {
+      "get": {
+        "operationId": "GoalsController_view",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: one goal with budget committed and remaining",
+        "tags": [
+          "Goals"
+        ]
+      }
+    },
+    "/api/goals/{id}/messages": {
+      "post": {
+        "operationId": "GoalsController_message",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoalMessageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: answer a clarifying question",
+        "tags": [
+          "Goals"
+        ]
+      }
+    },
+    "/api/goals/{id}/budget": {
+      "patch": {
+        "operationId": "GoalsController_budget",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBudgetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: change my budget (only I can)",
+        "tags": [
+          "Goals"
+        ]
+      }
+    },
+    "/api/goals/{id}/recommendations": {
+      "post": {
+        "operationId": "GoalsController_recommend",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: up to three explained recommendations, or an honest \"nothing fits\"",
+        "tags": [
+          "Goals"
+        ]
+      }
+    },
+    "/api/assistant/guides/{guideId}/questions": {
+      "post": {
+        "operationId": "AssistantController_ask",
+        "parameters": [
+          {
+            "name": "guideId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Buyer: ask about a purchased guide. 403 not_entitled / agent_access_not_permitted, 429 quota_exhausted.",
+        "tags": [
+          "Assistant"
+        ]
+      }
+    },
+    "/api/assistant/guides/{guideId}/messages": {
+      "get": {
+        "operationId": "AssistantController_history",
+        "parameters": [
+          {
+            "name": "guideId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Buyer: my assistant conversation for a guide",
+        "tags": [
+          "Assistant"
+        ]
+      }
+    },
+    "/api/assistant/requests/{requestId}/apply": {
+      "post": {
+        "operationId": "AssistantController_apply",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: turn a delivered personal response into next steps (only if the contributor allowed AI use)",
+        "tags": [
+          "Assistant"
+        ]
+      }
+    },
+    "/api/assistant/requests/{requestId}/messages": {
+      "get": {
+        "operationId": "AssistantController_plans",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: plans generated from a personal response",
+        "tags": [
+          "Assistant"
+        ]
+      }
+    },
+    "/api/requests/draft-from-gap": {
+      "post": {
+        "operationId": "RequestsController_draft",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: the agent prepares a request draft. Nothing is sent yet.",
+        "tags": [
+          "Personal requests"
+        ]
+      }
+    },
+    "/api/requests": {
+      "get": {
+        "operationId": "RequestsController_mine",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: my requests",
+        "tags": [
+          "Personal requests"
+        ]
+      }
+    },
+    "/api/requests/{id}": {
+      "get": {
+        "operationId": "RequestsController_view",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: one request, its history and any response",
+        "tags": [
+          "Personal requests"
+        ]
+      },
+      "patch": {
+        "operationId": "RequestsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: edit the draft and choose which details to share",
+        "tags": [
+          "Personal requests"
+        ]
+      }
+    },
+    "/api/requests/{id}/send": {
+      "post": {
+        "operationId": "RequestsController_send",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: approve and send (checked against budget; the acceptance window starts)",
+        "tags": [
+          "Personal requests"
+        ]
+      }
+    },
+    "/api/requests/{id}/cancel": {
+      "post": {
+        "operationId": "RequestsController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: cancel before it is accepted",
+        "tags": [
+          "Personal requests"
+        ]
+      }
+    },
+    "/api/requests/{id}/close": {
+      "post": {
+        "operationId": "RequestsController_close",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: mark a delivered response as received",
+        "tags": [
+          "Personal requests"
+        ]
+      }
+    },
+    "/api/requests/{id}/dispute": {
+      "post": {
+        "operationId": "RequestsController_dispute",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: report a delivery problem to an admin",
+        "tags": [
+          "Personal requests"
+        ]
+      }
+    },
+    "/api/studio/requests": {
+      "get": {
+        "operationId": "RequestsController_inbox",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Contributor: my request inbox (only details the learner chose to share)",
+        "tags": [
+          "Personal requests"
+        ]
+      }
+    },
+    "/api/studio/requests/{id}": {
+      "get": {
+        "operationId": "RequestsController_contributorView",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Contributor: one request",
+        "tags": [
+          "Personal requests"
+        ]
+      }
+    },
+    "/api/studio/requests/{id}/accept": {
+      "post": {
+        "operationId": "RequestsController_accept",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Contributor: accept (the learner then has a window to pay)",
+        "tags": [
+          "Personal requests"
+        ]
+      }
+    },
+    "/api/studio/requests/{id}/decline": {
+      "post": {
+        "operationId": "RequestsController_decline",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Contributor: decline (no money moves)",
+        "tags": [
+          "Personal requests"
+        ]
+      }
+    },
+    "/api/studio/requests/{id}/deliver": {
+      "post": {
+        "operationId": "RequestsController_deliver",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeliverDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Contributor: deliver the paid response",
+        "tags": [
+          "Personal requests"
+        ]
+      }
+    },
+    "/api/admin/requests": {
+      "get": {
+        "operationId": "RequestsController_attention",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Admin: requests that need attention (overdue or disputed)",
+        "tags": [
+          "Personal requests"
+        ]
+      }
+    },
+    "/api/admin/requests/{id}/uphold": {
+      "post": {
+        "operationId": "RequestsController_uphold",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Admin: close a dispute in the contributor’s favour",
+        "tags": [
+          "Personal requests"
+        ]
+      }
+    },
+    "/api/admin/demo/requests/{id}/fast-forward": {
+      "post": {
+        "operationId": "RequestsController_fastForward",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Admin (demo builds only): simulate the current deadline passing",
+        "tags": [
+          "Personal requests"
+        ]
+      }
+    },
+    "/api/feedback": {
+      "post": {
+        "operationId": "FeedbackController_submit",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Recipient: immediate or follow-up usefulness feedback",
+        "tags": [
+          "Feedback and reports"
+        ]
+      }
+    },
+    "/api/feedback/mine": {
+      "get": {
+        "operationId": "FeedbackController_mine",
+        "parameters": [
+          {
+            "name": "targetType",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "targetId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Recipient: my feedback for one guide or response",
+        "tags": [
+          "Feedback and reports"
+        ]
+      }
+    },
+    "/api/reports": {
+      "post": {
+        "operationId": "FeedbackController_report",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Signed-in user: report a guide, request or response to an admin",
+        "tags": [
+          "Feedback and reports"
+        ]
+      }
+    },
+    "/api/admin/reports": {
+      "get": {
+        "operationId": "FeedbackController_reports",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Admin: reports",
+        "tags": [
+          "Feedback and reports"
+        ]
+      }
+    },
+    "/api/admin/reports/{id}/resolve": {
+      "post": {
+        "operationId": "FeedbackController_resolve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveReportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Admin: resolve a report",
+        "tags": [
+          "Feedback and reports"
+        ]
+      }
+    },
+    "/api/admin/overview": {
+      "get": {
+        "operationId": "AdminController_overview",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Admin: queue counts and platform totals",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/payments": {
+      "get": {
+        "operationId": "AdminController_payments",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Admin: recent orders, webhook events and payouts",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/steward/sessions": {
+      "post": {
+        "operationId": "StewardController_start",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartSessionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: start (or reopen) a steward conversation for a goal",
+        "tags": [
+          "Steward"
+        ]
+      },
+      "get": {
+        "operationId": "StewardController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: my steward conversations",
+        "tags": [
+          "Steward"
+        ]
+      }
+    },
+    "/api/steward/sessions/{id}": {
+      "get": {
+        "operationId": "StewardController_view",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: conversation, workflow stage, next step and cards (syncs payment and deadline changes first)",
+        "tags": [
+          "Steward"
+        ]
+      }
+    },
+    "/api/steward/sessions/{id}/messages": {
+      "post": {
+        "operationId": "StewardController_message",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StewardMessageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: send a message; the steward runs a bounded tool loop and stops at every human decision",
+        "tags": [
+          "Steward"
+        ]
+      }
+    },
+    "/api/guides/{guideId}/field-notes": {
+      "get": {
+        "operationId": "FieldNotesController_forGuide",
+        "parameters": [
+          {
+            "name": "guideId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Public: what learners reported after trying this guide (self-reported)",
+        "tags": [
+          "Field notes"
+        ]
+      }
+    },
+    "/api/field-notes/draft": {
+      "post": {
+        "operationId": "FieldNotesController_draft",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftFieldNoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: draft a field note from my follow-up feedback (AI-assisted; nothing is published)",
+        "tags": [
+          "Field notes"
+        ]
+      }
+    },
+    "/api/field-notes/mine": {
+      "get": {
+        "operationId": "FieldNotesController_mine",
+        "parameters": [
+          {
+            "name": "source",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "GUIDE",
+                "RESPONSE"
+              ]
+            }
+          },
+          {
+            "name": "sourceId",
+            "required": true,
+            "in": "query",
+            "description": "Guide id, or request id for a personal response.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: my field note for one guide or response",
+        "tags": [
+          "Field notes"
+        ]
+      }
+    },
+    "/api/field-notes/{id}": {
+      "patch": {
+        "operationId": "FieldNotesController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFieldNoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: edit my draft field note",
+        "tags": [
+          "Field notes"
+        ]
+      }
+    },
+    "/api/field-notes/{id}/publish": {
+      "post": {
+        "operationId": "FieldNotesController_publish",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishFieldNoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Learner: publish my field note (needs approved: true); I then earn a share of later sales of the guide",
+        "tags": [
+          "Field notes"
+        ]
+      }
+    },
+    "/api/admin/field-notes": {
+      "get": {
+        "operationId": "FieldNotesController_listForAdmin",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Admin: published and hidden field notes",
+        "tags": [
+          "Field notes"
+        ]
+      }
+    },
+    "/api/admin/field-notes/{id}/hide": {
+      "post": {
+        "operationId": "FieldNotesController_hide",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HideFieldNoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Admin: hide a field note",
+        "tags": [
+          "Field notes"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "EnrichMINT API",
+    "description": "Helps people earn from their real-life experience, while helping others learn from it.",
+    "version": "0.1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "access-token": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "alex@example.com"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "SignUpDto": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "example": "Alex"
+          },
+          "email": {
+            "type": "string",
+            "example": "alex@example.com"
+          },
+          "password": {
+            "type": "string",
+            "description": "10 to 128 characters."
+          }
+        },
+        "required": [
+          "displayName",
+          "email",
+          "password"
+        ]
+      },
+      "ApplyContributorDto": {
+        "type": "object",
+        "properties": {
+          "headline": {
+            "type": "string",
+            "example": "Former support lead, now freelance onboarding consultant"
+          },
+          "background": {
+            "type": "string",
+            "description": "Your background in your own words. Shown on your guides."
+          }
+        },
+        "required": [
+          "headline",
+          "background"
+        ]
+      },
+      "UpdateContributorDto": {
+        "type": "object",
+        "properties": {
+          "headline": {
+            "type": "string"
+          },
+          "background": {
+            "type": "string"
+          },
+          "payoutEmail": {
+            "type": "string",
+            "description": "PayPal (sandbox) email that receives payouts."
+          },
+          "responsePriceCents": {
+            "type": "number",
+            "description": "Price of a personalized written response, in cents."
+          },
+          "acceptingRequests": {
+            "type": "boolean"
+          },
+          "acceptanceWindowH": {
+            "type": "number",
+            "description": "Hours you have to accept or decline a request."
+          },
+          "deliveryH": {
+            "type": "number",
+            "description": "Hours you have to deliver after payment is confirmed."
+          },
+          "boundaries": {
+            "type": "string",
+            "description": "Topics you will and will not answer."
+          }
+        }
+      },
+      "GuideSectionDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "actions"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "body"
+        ]
+      },
+      "GuideGapDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "question"
+        ]
+      },
+      "UpdateDraftDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "preview": {
+            "type": "string",
+            "description": "Free preview shown before purchase."
+          },
+          "audience": {
+            "type": "string"
+          },
+          "limitations": {
+            "type": "string"
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuideSectionDto"
+            }
+          },
+          "gaps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuideGapDto"
+            }
+          }
+        }
+      },
+      "UpdateGuideSettingsDto": {
+        "type": "object",
+        "properties": {
+          "priceCents": {
+            "type": "number",
+            "description": "Guide price in cents."
+          },
+          "agentAssistAllowed": {
+            "type": "boolean",
+            "description": "Whether AI may read this guide to help people who bought it. Reading access for buyers is separate and always included."
+          },
+          "topics": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "categoryId": {
+            "type": "string"
+          }
+        }
+      },
+      "ReviewDecisionDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "description": "Required when rejecting: what the contributor should change."
+          }
+        }
+      },
+      "CreateOrderDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "GUIDE",
+              "REQUEST"
+            ]
+          },
+          "guideId": {
+            "type": "string",
+            "description": "Required when kind is GUIDE."
+          },
+          "requestId": {
+            "type": "string",
+            "description": "Required when kind is REQUEST."
+          },
+          "goalId": {
+            "type": "string",
+            "description": "The goal whose budget this purchase counts against."
+          },
+          "approved": {
+            "type": "boolean",
+            "description": "Must be true: the buyer reviewed the price and approved this payment."
+          }
+        },
+        "required": [
+          "kind",
+          "approved"
+        ]
+      },
+      "RequestRefundDto": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "orderId",
+          "reason"
+        ]
+      },
+      "DecideRefundDto": {
+        "type": "object",
+        "properties": {
+          "approve": {
+            "type": "boolean"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "approve"
+        ]
+      },
+      "AnswerDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "situation"
+          },
+          "answer": {
+            "type": "string"
+          },
+          "isFollowUp": {
+            "type": "boolean",
+            "description": "True when this answers the follow-up question for `key`."
+          }
+        },
+        "required": [
+          "key",
+          "answer"
+        ]
+      },
+      "DraftGuideDto": {
+        "type": "object",
+        "properties": {
+          "categoryId": {
+            "type": "string"
+          },
+          "priceCents": {
+            "type": "number",
+            "description": "Guide price in cents. Can be changed before submitting."
+          }
+        },
+        "required": [
+          "categoryId"
+        ]
+      },
+      "CreateGoalDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "example": "My support role is changing because of AI. I want to explore freelancing but I do not know where to start. I have weekends free."
+          },
+          "budgetCents": {
+            "type": "number",
+            "example": 2000,
+            "description": "Total you are willing to spend on this goal, in cents."
+          }
+        },
+        "required": [
+          "text",
+          "budgetCents"
+        ]
+      },
+      "GoalMessageDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "UpdateBudgetDto": {
+        "type": "object",
+        "properties": {
+          "budgetCents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "budgetCents"
+        ]
+      },
+      "AskDto": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "goalId": {
+            "type": "string",
+            "description": "Goal for situation context and the budget shown with any request offer."
+          }
+        },
+        "required": [
+          "question"
+        ]
+      },
+      "DraftRequestDto": {
+        "type": "object",
+        "properties": {
+          "guideId": {
+            "type": "string",
+            "description": "The guide whose contributor you want to ask."
+          },
+          "question": {
+            "type": "string"
+          },
+          "goalId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "guideId",
+          "question"
+        ]
+      },
+      "ContextItemDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "share": {
+            "type": "boolean",
+            "description": "Only items with share=true are ever shown to the contributor."
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "value",
+          "share"
+        ]
+      },
+      "UpdateRequestDto": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "desiredResponse": {
+            "type": "string"
+          },
+          "contextItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContextItemDto"
+            }
+          }
+        }
+      },
+      "ApproveDto": {
+        "type": "object",
+        "properties": {
+          "approved": {
+            "type": "boolean",
+            "description": "Must be true: you reviewed what will be shared and the price."
+          }
+        },
+        "required": [
+          "approved"
+        ]
+      },
+      "ReasonDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "DeliverDto": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "aiUseAllowed": {
+            "type": "boolean",
+            "description": "Whether the learner’s AI assistant may read this response to help them apply it. It stays private either way."
+          }
+        },
+        "required": [
+          "body",
+          "aiUseAllowed"
+        ]
+      },
+      "FeedbackDto": {
+        "type": "object",
+        "properties": {
+          "targetType": {
+            "type": "string",
+            "enum": [
+              "GUIDE",
+              "RESPONSE"
+            ]
+          },
+          "targetId": {
+            "type": "string",
+            "description": "Guide id, or request id for a personal response."
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "IMMEDIATE",
+              "FOLLOW_UP"
+            ]
+          },
+          "relevant": {
+            "type": "boolean",
+            "description": "Immediate: was this relevant?"
+          },
+          "nextStep": {
+            "type": "boolean",
+            "description": "Immediate: did it help you identify a next step?"
+          },
+          "missingOrMisleading": {
+            "type": "string",
+            "description": "Immediate: anything missing or misleading?"
+          },
+          "tried": {
+            "type": "boolean",
+            "description": "Follow-up: did you try the guidance?"
+          },
+          "outcome": {
+            "type": "string",
+            "description": "Follow-up: what happened?"
+          },
+          "usefulAfter": {
+            "type": "boolean",
+            "description": "Follow-up: was it useful after applying it?"
+          }
+        },
+        "required": [
+          "targetType",
+          "targetId",
+          "phase"
+        ]
+      },
+      "ReportDto": {
+        "type": "object",
+        "properties": {
+          "targetType": {
+            "type": "string",
+            "enum": [
+              "GUIDE",
+              "REQUEST",
+              "RESPONSE",
+              "USER"
+            ]
+          },
+          "targetId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "targetType",
+          "targetId",
+          "reason"
+        ]
+      },
+      "ResolveReportDto": {
+        "type": "object",
+        "properties": {
+          "resolution": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "resolution"
+        ]
+      },
+      "StartSessionDto": {
+        "type": "object",
+        "properties": {
+          "goalId": {
+            "type": "string",
+            "description": "An existing goal. Or send text and budgetCents to create one."
+          },
+          "text": {
+            "type": "string"
+          },
+          "budgetCents": {
+            "type": "number",
+            "description": "Total budget for the goal, in cents."
+          }
+        }
+      },
+      "StewardMessageDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "DraftFieldNoteDto": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "GUIDE",
+              "RESPONSE"
+            ]
+          },
+          "sourceId": {
+            "type": "string",
+            "description": "Guide id, or request id for a personal response."
+          }
+        },
+        "required": [
+          "source",
+          "sourceId"
+        ]
+      },
+      "UpdateFieldNoteDto": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string",
+            "description": "What you tried and what happened."
+          }
+        },
+        "required": [
+          "body"
+        ]
+      },
+      "PublishFieldNoteDto": {
+        "type": "object",
+        "properties": {
+          "approved": {
+            "type": "boolean",
+            "description": "Must be true: you agree to publish this note on the guide page and to the assistant."
+          },
+          "payoutEmail": {
+            "type": "string",
+            "description": "PayPal (sandbox) email for field note shares, if you have none on file."
+          }
+        },
+        "required": [
+          "approved"
+        ]
+      },
+      "HideFieldNoteDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      }
+    }
+  }
+}
